@@ -2,7 +2,11 @@
     (:require [om.core :as om :include-macros true]
               [sablono.core :as html :refer-macros [html]]))
 
-(defn products-component [{products :products :as data}]
+(defn product-component [data]
+  [:div {:key (:_id data)} (:_id data)])
+
+(defn products-component [{{{total :total products :hits :as hits} :hits} :products :as data}]
   (om/component
-    (html [:h3 "products"
-        [:ul (map (fn [[k x]] (when x [:li k])) products)]])))
+      (html [:div
+              [:h3 "products / " total]
+              [:div (map product-component products)]])))
