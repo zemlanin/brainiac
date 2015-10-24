@@ -1,4 +1,4 @@
-(defproject sho "0.1.0-SNAPSHOT"
+(defproject brainiac "0.1.0-SNAPSHOT"
   :description "FIXME: write this!"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -22,17 +22,17 @@
     :builds [{:id "dev"
               :source-paths ["src"]
 
-              :figwheel { :on-jsload "sho.core/on-js-reload" }
+              :figwheel { :on-jsload "brainiac.core/on-js-reload" }
 
-              :compiler {:main sho.core
+              :compiler {:main brainiac.core
                          :asset-path "js/compiled/out"
-                         :output-to "resources/public/js/compiled/sho.js"
+                         :output-to "resources/public/js/compiled/brainiac.js"
                          :output-dir "resources/public/js/compiled/out"
                          :source-map-timestamp true }}
              {:id "min"
               :source-paths ["src"]
-              :compiler {:output-to "resources/public/js/compiled/sho.js"
-                         :main sho.core
+              :compiler {:output-to "resources/public/js/compiled/brainiac.js"
+                         :main brainiac.core
                          :optimizations :advanced
                          :pretty-print false}}]}
 

@@ -1,11 +1,11 @@
-(ns ^:figwheel-always sho.core
+(ns ^:figwheel-always brainiac.core
     (:require [om.core :as om :include-macros true]
               [om.dom :as dom :include-macros true]
-              [sho.components.filters :as filters]
-              [sho.appstate :as app]
-              [sho.search :as search]
-              [sho.components.appliedFilters :as appliedFilters]
-              [sho.components.products :as products]))
+              [brainiac.components.filters :as filters]
+              [brainiac.appstate :as app]
+              [brainiac.search :as search]
+              [brainiac.components.appliedFilters :as appliedFilters]
+              [brainiac.components.products :as products]))
 
 (enable-console-print!)
 

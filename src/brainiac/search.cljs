@@ -1,7 +1,7 @@
-(ns ^:figwheel-always sho.search
+(ns ^:figwheel-always brainiac.search
     (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [om.core :as om :include-macros true]
-              [sho.appstate :as app]
+              [brainiac.appstate :as app]
               [ajax.core :as ajax]
               [cljs.core.async :refer [>! <! chan close!]]))
 

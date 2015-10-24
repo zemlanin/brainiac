@@ -1,4 +1,4 @@
-(ns ^:figwheel-always sho.components.products
+(ns ^:figwheel-always brainiac.components.products
     (:require [om.core :as om :include-macros true]
               [sablono.core :as html :refer-macros [html]]))
 

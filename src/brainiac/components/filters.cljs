@@ -1,6 +1,6 @@
-(ns ^:figwheel-always sho.components.filters
+(ns ^:figwheel-always brainiac.components.filters
     (:require [om.core :as om :include-macros true]
-              [sho.appstate :as app]
+              [brainiac.appstate :as app]
               [sablono.core :as html :refer-macros [html]]
               [cljs.core.async :refer [>! <! put! chan]]))
 

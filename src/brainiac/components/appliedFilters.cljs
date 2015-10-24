@@ -1,4 +1,4 @@
-(ns ^:figwheel-always sho.components.appliedFilters
+(ns ^:figwheel-always brainiac.components.appliedFilters
     (:require [om.core :as om :include-macros true]
               [sablono.core :as html :refer-macros [html]]))
 
