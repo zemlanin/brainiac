@@ -1,11 +1,10 @@
 (ns ^:figwheel-always brainiac.components.appliedFilters
-    (:require [om.core :as om :include-macros true]
-              [sablono.core :as html :refer-macros [html]]))
+    (:require [rum.core :as rum]
+              [brainiac.appstate :as app]))
 
-(defn appliedFilters-component [{applied :applied :as data}]
-  (om/component
-    (html
-      [:div
-        [:h3 "appliedFilters"]
-        [:ul
-          (map (fn [[k x]] (when x [:li {:key k} k])) applied)]])))
+(rum/defc appliedFilters-component < rum/reactive []
+  (let [applied (:applied (rum/react app/app-state))]
+    [:div
+      [:h3 "appliedFilters"]
+      [:ul (for [[k x] applied]
+              (when x [:li {:key k} k]))]]))

@@ -1,6 +1,5 @@
 (ns ^:figwheel-always brainiac.core
-    (:require [om.core :as om :include-macros true]
-              [om.dom :as dom :include-macros true]
+    (:require [rum.core :as rum]
               [brainiac.components.filters :as filters]
               [brainiac.appstate :as app]
               [brainiac.search :as search]
@@ -11,19 +10,16 @@
 
 (search/setup-watcher)
 
-(om/root
-  filters/filters-component
-  app/app-state
-  {:target (. js/document (getElementById "filters"))})
+(rum/mount
+  (filters/filters-component)
+  (.getElementById js/document "filters"))
 
-(om/root
-  appliedFilters/appliedFilters-component
-  app/app-state
-  {:target (. js/document (getElementById "appliedFilters"))})
+(rum/mount
+  (appliedFilters/appliedFilters-component)
+  (.getElementById js/document "appliedFilters"))
 
-(om/root
-  products/products-component
-  app/app-state
-  {:target (. js/document (getElementById "products"))})
+(rum/mount
+  (products/products-component)
+  (.getElementById js/document "products"))
 
 (defn on-js-reload [])

@@ -1,7 +1,6 @@
 (ns ^:figwheel-always brainiac.search
     (:require-macros [cljs.core.async.macros :refer [go]])
-    (:require [om.core :as om :include-macros true]
-              [brainiac.appstate :as app]
+    (:require [brainiac.appstate :as app]
               [ajax.core :as ajax]
               [cljs.core.async :refer [>! <! chan close!]]))
 
@@ -30,7 +29,7 @@
 (defn perform-search [_ _ prev cur]
   (when-not (= (:applied prev) (:applied cur))
     (go
-      (swap! app/app-state assoc :products
+      (swap! app/app-state assoc :search-result
         (-> (<! (POST "http://localhost:9200/uaprom2_brainiac/product/_search"
                       {:params
                         {:query
