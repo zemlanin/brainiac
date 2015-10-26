@@ -9,5 +9,5 @@
   (let [search-result (:search-result (rum/react app/app-state))
         {{total :total products :hits :as hits} :hits} search-result]
     [:div
-      [:h3 "products / " total]
+      [:h3 (if total (str "products / " total) "products")]
       [:div (map product-component products)]]))

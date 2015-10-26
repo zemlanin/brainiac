@@ -1,2 +1,19 @@
 /* some style */
 
+#appliedFilters {
+  background-color: gray;
+}
+
+#filters {
+  background-color: lightgray;
+  min-height: 100vh;
+}
+
+#appliedFilters li {
+  display: inline;
+  list-style-type: none;
+  margin-right: 0.5em;
+  background-color: white;
+  padding: 0.5em;
+  border-radius: 1em;
+}

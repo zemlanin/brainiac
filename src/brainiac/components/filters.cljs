@@ -42,7 +42,6 @@
   (let [applied (:applied (rum/react app/app-state))
         filters (:mappings (rum/react app/app-state))]
     [:div
-      [:h3 "filters"]
       [:ul (for [[n filter-data] (into [] filters)]
                 (match filter-data
                   {:type "boolean"} [:li {:key n} (boolean-filter n (get applied n))]
