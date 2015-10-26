@@ -1,5 +1,21 @@
 /* some style */
 
+a {
+  cursor: pointer;
+}
+
+.fa {
+  font-family: 'FontAwesome';
+}
+
+.fa-toggle-on {
+  color: #00A500;
+}
+
+.fa-remove {
+  color: red;
+}
+
 #sidebar {
   background-color: #DFFEE3;
   min-height: 100vh;
@@ -41,11 +57,14 @@
 
 #controls .action:hover {
   color: white;
-  cursor: pointer;
 }
 
 #appliedFilters {
   background-color: #00A500;
+}
+
+#appliedFilters ul {
+  padding-left: 1em;
 }
 
 #appliedFilters li {

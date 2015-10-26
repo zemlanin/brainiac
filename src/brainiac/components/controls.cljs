@@ -12,7 +12,7 @@
 
 (rum/defc controls-component []
   [:div
-    [:a {:className "action fa-cloud-download"
+    [:a {:className "action fa fa-download"
           :onClick export-state}]
-    [:a {:className "action fa-cloud-upload"
+    [:a {:className "action fa fa-upload"
           :onClick import-state}]])
