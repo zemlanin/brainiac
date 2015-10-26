@@ -40,17 +40,22 @@
             :properties))))
 
 (defn perform-search [_ _ prev cur]
-  (when-not (= (:applied prev) (:applied cur))
-    (go
-      (swap! app/app-state assoc :search-result
-        (-> (<! (POST es-endpoint-search
-                      {:params
-                        {:query
-                          {:filtered
-                            {:filter
-                              {:bool
-                                {:must (for [[f v] (:applied cur)]
-                                  {:term {f v}})}}}}}})))))))
+  (let [applied (filter #(not (nil? (second %))) (:applied cur))
+        filter-cond (case (count applied)
+                        0 {}
+                        1 (let [[n v] (first applied)] {:term {n v}})
+                        {:bool
+                          {:must (for [[f v] applied]
+                            {:term {f v}})}})]
+
+    (when-not (= (:applied prev) (:applied cur))
+      (go
+        (swap! app/app-state assoc :search-result
+          (-> (<! (POST es-endpoint-search
+                        {:params
+                          {:query
+                            {:filtered
+                              {:filter filter-cond}}}}))))))))
 
 (defn setup-watcher []
   (get-mapping)
