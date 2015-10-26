@@ -4,6 +4,10 @@
               [ajax.core :as ajax]
               [cljs.core.async :refer [>! <! chan close!]]))
 
+(def es-endpoint "http://localhost:9200/uaprom2_brainiac/product")
+(def es-endpoint-mapping (str es-endpoint "/_mapping"))
+(def es-endpoint-search (str es-endpoint "/_search"))
+
 (defn chan-hand [ch]
   (fn [event]
     (go (>! ch event) (close! ch))))
@@ -26,18 +30,29 @@
                                         :keywords? true}))
               ch)))
 
+(defn get-mapping []
+  (go
+    (swap! app/app-state assoc :mappings
+        (-> (<! (GET es-endpoint-mapping))
+            :uaprom2_brainiac
+            :mappings
+            :product
+            :properties))))
+
 (defn perform-search [_ _ prev cur]
   (when-not (= (:applied prev) (:applied cur))
     (go
       (swap! app/app-state assoc :search-result
-        (-> (<! (POST "http://localhost:9200/uaprom2_brainiac/product/_search"
+        (-> (<! (POST es-endpoint-search
                       {:params
                         {:query
                           {:filtered
                             {:filter
-                              {:term (:applied cur)}}}}}))))
-      (.log js/console "searching"))))
+                              {:bool
+                                {:must (for [[f v] (:applied cur)]
+                                  {:term {f v}})}}}}}})))))))
 
 (defn setup-watcher []
+  (get-mapping)
   (remove-watch app/app-state :search-watcher)
   (add-watch app/app-state :search-watcher perform-search))

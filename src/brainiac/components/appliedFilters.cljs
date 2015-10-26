@@ -7,4 +7,4 @@
     [:div
       [:h3 "appliedFilters"]
       [:ul (for [[k x] applied]
-              (when x [:li {:key k} k]))]]))
+              (when x [:li {:key (name k)} (name k)]))]]))
