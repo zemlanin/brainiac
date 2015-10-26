@@ -10,6 +10,7 @@
 (enable-console-print!)
 
 (search/setup-watcher)
+(controls/setup-watcher)
 
 (rum/mount
   (filters/filters-component)
