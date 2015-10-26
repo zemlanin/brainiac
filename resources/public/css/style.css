@@ -9,6 +9,14 @@
   min-height: 100vh;
 }
 
+#filters li {
+  list-style-type: none;
+}
+
+#filters li input {
+  margin-left: 0.5em;
+}
+
 #appliedFilters li {
   display: inline;
   list-style-type: none;
