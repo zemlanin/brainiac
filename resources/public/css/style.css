@@ -1,20 +1,51 @@
 /* some style */
 
-#appliedFilters {
-  background-color: gray;
+#sidebar {
+  background-color: #DFFEE3;
+  min-height: 100vh;
 }
 
-#filters {
-  background-color: lightgray;
-  min-height: 100vh;
+#filters ul {
+  padding: 0;
 }
 
 #filters li {
   list-style-type: none;
 }
 
-#filters li input {
+#filters fieldset {
+  border: none;
+}
+
+#filters fieldset ul {
+  padding-left: 1em;
+}
+
+#filters fieldset li input {
   margin-left: 0.5em;
+}
+
+#controls {
+  position: absolute;
+  bottom: 0;
+  background-color: #00A500;
+  width: inherit;
+  font-size: 3em;
+  text-align: center;
+}
+
+#controls .action {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+#controls .action:hover {
+  color: white;
+  cursor: pointer;
+}
+
+#appliedFilters {
+  background-color: #00A500;
 }
 
 #appliedFilters li {
