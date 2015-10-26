@@ -4,7 +4,11 @@
               [ajax.core :as ajax]
               [cljs.core.async :refer [>! <! chan close!]]))
 
-(def es-endpoint "http://localhost:9200/uaprom2_brainiac/product")
+(def es-host "http://localhost:9200")
+(def es-index "uaprom2_brainiac")
+(def es-doc-type "product")
+
+(def es-endpoint (str es-host "/" es-index "/" es-doc-type))
 (def es-endpoint-mapping (str es-endpoint "/_mapping"))
 (def es-endpoint-search (str es-endpoint "/_search"))
 
@@ -34,9 +38,9 @@
   (go
     (swap! app/app-state assoc :mappings
         (-> (<! (GET es-endpoint-mapping))
-            :uaprom2_brainiac
+            ((keyword es-index))
             :mappings
-            :product
+            ((keyword es-doc-type))
             :properties))))
 
 (defn perform-search [_ _ prev cur]
