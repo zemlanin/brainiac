@@ -13,16 +13,14 @@
       (str "http://" (first (:hosts endpoint)) "/" (:index endpoint))
       (str es-host "/" es-index)))
 (defn es-endpoint-mapping [] (str (es-endpoint) "/_mapping"))
-(defn es-endpoint-search [] (str es-endpoint "/" es-doc-type "/_search"))
+(defn es-endpoint-search [] (str (es-endpoint) "/" es-doc-type "/_search"))
 
 (defn get-mapping []
   (go
     (swap! app/app-state assoc :mappings
         (-> (<! (GET (es-endpoint-mapping)))
             ((keyword es-index))
-            :mappings
-            #_((keyword es-doc-type))
-            #_:properties))))
+            :mappings))))
 
 (defn perform-search [_ _ prev cur]
   (let [applied (filter #(not (nil? (second %))) (:applied cur))
