@@ -2,6 +2,7 @@
     (:require [rum.core :as rum]
               [brainiac.appstate :as app]
               [brainiac.search :as search]
+              [brainiac.schema :as schema]
               [brainiac.components.modals :as modals]
               [brainiac.components.filters :as filters]
               [brainiac.components.controls :as controls]
@@ -12,6 +13,7 @@
 
 (modals/setup-watcher)
 (search/setup-watcher)
+(schema/setup-watcher)
 (controls/setup-watcher)
 
 (rum/mount

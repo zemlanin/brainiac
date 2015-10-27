@@ -9,8 +9,8 @@
 (def es-doc-type "product")
 
 (defn es-endpoint []
-  (if-let [endpoint (:endpoint @app/app-state)]
-      (str "http://" (first (:hosts endpoint)) "/" (:index endpoint))
+  (if-let [selected (-> @app/app-state :endpoint :selected)]
+      (str "http://" (:host selected) "/" (:index selected))
       (str es-host "/" es-index)))
 (defn es-endpoint-mapping [] (str (es-endpoint) "/_mapping"))
 (defn es-endpoint-search [] (str (es-endpoint) "/" es-doc-type "/_search"))

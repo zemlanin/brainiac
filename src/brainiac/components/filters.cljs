@@ -20,9 +20,12 @@
 
 (defn radio-onchange [n e]
   (.preventDefault e)
-  (let [checked (-> (.-target e) .-value js-str->clj)
-        applied (:applied @app/app-state)]
-    (swap! app/app-state assoc :applied (assoc applied n checked))))
+  (let [applied (:applied @app/app-state)
+        checked (-> (.-target e) .-value js-str->clj)
+        new-applied (if (nil? checked)
+                        (dissoc applied n)
+                        (assoc applied n checked))]
+    (swap! app/app-state assoc :applied new-applied)))
 
 (defn boolean-filter [n v]
   [:fieldset
