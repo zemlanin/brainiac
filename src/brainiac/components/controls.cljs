@@ -39,8 +39,8 @@
         endpoint (str "http://" (-> state :endpoint :selected :host) "/_mapping")]
       (go
         (let [indices (->> (<! (GET endpoint))
-                        (filter #(not (key-starts-with-dot %)))
-                        (filter value-has-mappings))
+                          (filter #(not (key-starts-with-dot %)))
+                          (filter value-has-mappings))
               stripped-indices (->> indices
                                     (map #(vector (first %) (-> % second :mappings keys)))
                                     (into {}))]
@@ -48,14 +48,19 @@
           (when (= 1 (count indices))
               (swap! app/app-state assoc-in [:endpoint :selected :index] (name (ffirst indices))))))))
 
+(defn write-new-field-input [new-value field-state settings-state]
+  (swap! app/app-state assoc-in settings-state new-value)
+  (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
+
 (defn check-field-input [e field-state settings-state]
   (let [new-value (-> e .-target .-value)]
     (if-not (s/check (get-in schema/StateSchema settings-state) new-value)
-      (do
-        (swap! app/app-state assoc-in settings-state new-value)
-        (swap! app/app-state update-in (butlast field-state) dissoc (last field-state))
-        (load-indices))
+      (write-new-field-input new-value field-state settings-state)
       (swap! app/app-state assoc-in field-state new-value))))
+
+(defn set-focus
+  ([] (swap! app/app-state update-in [:settings] dissoc :focus))
+  ([k] (swap! app/app-state assoc-in [:settings :focus] k)))
 
 (defn settings-modal  []
   (let [state @app/app-state
@@ -84,7 +89,21 @@
                     :type "text"
                     :style {:borderColor (if (:index settings) "red" "green")}
                     :value (or (-> settings :index) (-> endpoint :selected :index))
-                    :onChange #(check-field-input % '(:settings :index) '(:endpoint :selected :index))}]]
+                    :onChange #(check-field-input % '(:settings :index) '(:endpoint :selected :index))
+                    :onFocus #(set-focus :index)
+                    :onBlur #(set-focus)}]
+          (when (or (:index settings) (-> endpoint :selected :index empty?))
+            (for [i (->> endpoint
+                          :indices
+                          keys
+                          (map name)
+                          (filter #(if-let [v (:index settings)] (.startsWith % v) true))
+                          (take 3))]
+                [:a {:style {:marginRight "1em"
+                              :textDecoration "underline"}
+                      :onClick #(write-new-field-input i '(:settings :index) '(:endpoint :selected :index))}
+                  i]))
+          ]
 
         [:label {:className "pure-u-7-24"} "doc_type"
           [:select {:className "pure-u-23-24"
@@ -108,10 +127,14 @@
     (if (zero? (count modals)) (swap! app/app-state assoc :modals [#'settings-modal]))))
 
 (defn update-controls [_ _ prev cur]
-  (when-not (= (:cloud prev) (:cloud cur))
-    (go
+  (go
+    (when-not (= (:cloud prev) (:cloud cur))
       (swap! app/app-state assoc :endpoint
-        (<! (GET (:cloud cur)))))))
+        (<! (GET (:cloud cur)))))
+    ; TODO: optimize requests
+    (when-not (= (:endpoint prev) (:endpoint cur))
+        (load-indices)
+        (search/get-mapping))))
 
 (rum/defc controls-component []
   [:div

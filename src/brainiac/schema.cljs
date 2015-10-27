@@ -19,7 +19,8 @@
               :indices {s/Keyword [s/Keyword]}}
   :modals [s/Any]
   :settings {(s/optional-key :index) s/Str
-              (s/optional-key :host) s/Str}})
+              (s/optional-key :host) s/Str
+              (s/optional-key :focus) s/Keyword}})
 
 (defn validate-schema []
   (when-let [err (s/check StateSchema @app/app-state)]
