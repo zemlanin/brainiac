@@ -50,4 +50,6 @@
       [:ul (for [[n filter-data] (into [] filters)]
                 (match filter-data
                   {:type "boolean"} [:li {:key n} (boolean-filter n (get applied n))]
-                  :else nil))]]))
+                  :else [:li {:key n
+                              :style {:color "gray"
+                                      :fontSize "0.6em"}} (:type filter-data) (str n)]))]]))
