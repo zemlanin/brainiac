@@ -4,14 +4,22 @@
 
 (def StateSchema {
   :applied {s/Keyword s/Bool}
-  :search-result {s/Keyword s/Any
-                  :hits {s/Keyword s/Any
-                          :total s/Num
-                          :hits [s/Any]}}
+  (s/optional-key :search-result) {s/Keyword s/Any
+                                    :hits {s/Keyword s/Any
+                                            :total s/Num
+                                            :hits [s/Any]}}
   :mappings s/Any
-  :cloud s/Str
-  :endpoint {s/Keyword s/Any}
-  :modals [s/Any]})
+  (s/optional-key :cloud) s/Str
+  :endpoint {s/Keyword s/Any
+              :selected {:index (s/conditional
+                                  empty? s/Str
+                                  #(contains? (-> @app/app-state :endpoint :indices) (keyword %)) s/Str)
+                          :doc-type s/Str
+                          :host (s/conditional #(= "localhost:9200" %) s/Str)}
+              :indices {s/Keyword [s/Keyword]}}
+  :modals [s/Any]
+  :settings {(s/optional-key :index) s/Str
+              (s/optional-key :host) s/Str}})
 
 (defn validate-schema []
   (when-let [err (s/check StateSchema @app/app-state)]

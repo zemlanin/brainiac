@@ -4,23 +4,29 @@
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :refer [<!]]))
 
-(def es-host "http://localhost:9200")
-(def es-index "uaprom2_brainiac")
-(def es-doc-type "product")
-
+; TODO: get rid of all if-lets 
 (defn es-endpoint []
   (if-let [selected (-> @app/app-state :endpoint :selected)]
       (str "http://" (:host selected) "/" (:index selected))
-      (str es-host "/" es-index)))
-(defn es-endpoint-mapping [] (str (es-endpoint) "/_mapping"))
-(defn es-endpoint-search [] (str (es-endpoint) "/" es-doc-type "/_search"))
+      "http://localhost:9200/product"))
+
+(defn es-endpoint-mapping []
+  (if-let [selected (-> @app/app-state :endpoint :selected)]
+      (str (es-endpoint) "/" (:doc-type selected) "/_mapping")
+      (str (es-endpoint) "/product/_mapping")))
+
+(defn es-endpoint-search []
+  (if-let [selected (-> @app/app-state :endpoint :selected)]
+      (str (es-endpoint) "/" (:doc-type selected) "/_search")
+      (str (es-endpoint) "/product/_search")))
 
 (defn get-mapping []
-  (go
-    (swap! app/app-state assoc :mappings
-        (-> (<! (GET (es-endpoint-mapping)))
-            ((keyword es-index))
-            :mappings))))
+  (let [es-index (-> @app/app-state :endpoint :selected :index keyword)]
+    (go
+      (swap! app/app-state assoc :mappings
+          (-> (<! (GET (es-endpoint-mapping)))
+              es-index
+              :mappings)))))
 
 (defn perform-search [_ _ prev cur]
   (let [applied (filter #(not (nil? (second %))) (:applied cur))
