@@ -4,12 +4,12 @@
 
 (def StateSchema {
   :applied {s/Keyword s/Bool}
-  (s/optional-key :search-result) {s/Keyword s/Any
-                                    :hits {s/Keyword s/Any
-                                            :total s/Num
-                                            :hits [s/Any]}}
-  :mappings s/Any
-  (s/optional-key :cloud) s/Str
+  :search-result {s/Keyword s/Any
+                  :hits {s/Keyword s/Any
+                          :total s/Num
+                          :hits [s/Any]}}
+  :mappings {s/Keyword s/Any}
+  :cloud s/Str
   :endpoint {s/Keyword s/Any
               :selected {:index (s/conditional
                                   empty? s/Str

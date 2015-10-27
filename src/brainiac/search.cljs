@@ -4,24 +4,20 @@
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :refer [<!]]))
 
-; TODO: get rid of all if-lets 
 (defn es-endpoint []
-  (if-let [selected (-> @app/app-state :endpoint :selected)]
-      (str "http://" (:host selected) "/" (:index selected))
-      "http://localhost:9200/product"))
+  (when-let [selected (-> @app/app-state :endpoint :selected)]
+      (str "http://" (:host selected) "/" (:index selected))))
 
 (defn es-endpoint-mapping []
-  (if-let [selected (-> @app/app-state :endpoint :selected)]
-      (str (es-endpoint) "/" (:doc-type selected) "/_mapping")
-      (str (es-endpoint) "/product/_mapping")))
+  (when-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]
+      (str (es-endpoint) "/" doc-type "/_mapping")))
 
 (defn es-endpoint-search []
-  (if-let [selected (-> @app/app-state :endpoint :selected)]
-      (str (es-endpoint) "/" (:doc-type selected) "/_search")
-      (str (es-endpoint) "/product/_search")))
+  (when-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]
+      (str (es-endpoint) "/" doc-type "/_search")))
 
 (defn get-mapping []
-  (let [es-index (-> @app/app-state :endpoint :selected :index keyword)]
+  (when-let [es-index (-> @app/app-state :endpoint :selected :index keyword)]
     (go
       (swap! app/app-state assoc :mappings
           (-> (<! (GET (es-endpoint-mapping)))

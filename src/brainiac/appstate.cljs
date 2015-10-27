@@ -1,4 +1,3 @@
 (ns ^:figwheel-always brainiac.appstate)
 
-(defonce app-state (atom {:applied {}
-                          :mappings {}}))
+(defonce app-state (atom {}))
