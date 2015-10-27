@@ -39,8 +39,10 @@
                   str-val]]))]])
 
 (rum/defc filters-component < rum/reactive []
-  (let [applied (:applied (rum/react app/app-state))
-        filters (:mappings (rum/react app/app-state))]
+  (let [state (rum/react app/app-state)
+        applied (:applied state)
+        doc-type (or (-> state :endpoint :doc-type) :product)
+        filters (-> state :mappings doc-type :properties)]
     [:div
       [:ul (for [[n filter-data] (into [] filters)]
                 (match filter-data

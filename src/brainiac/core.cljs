@@ -2,6 +2,7 @@
     (:require [rum.core :as rum]
               [brainiac.appstate :as app]
               [brainiac.search :as search]
+              [brainiac.components.modals :as modals]
               [brainiac.components.filters :as filters]
               [brainiac.components.controls :as controls]
               [brainiac.components.appliedFilters :as appliedFilters]
@@ -9,8 +10,13 @@
 
 (enable-console-print!)
 
+(modals/setup-watcher)
 (search/setup-watcher)
 (controls/setup-watcher)
+
+(rum/mount
+  (modals/modals-component)
+  (.getElementById js/document "modals"))
 
 (rum/mount
   (filters/filters-component)
