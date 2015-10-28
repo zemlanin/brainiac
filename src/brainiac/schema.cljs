@@ -18,9 +18,8 @@
                           :host (s/conditional #(= "localhost:9200" %) s/Str)}
               :indices {s/Keyword [s/Keyword]}}
   :modals [s/Any]
-  :settings {(s/optional-key :fields)
-              {(s/optional-key :index) s/Str
-                (s/optional-key :host) s/Str}}})
+  :settings {(s/optional-key :fields) (s/maybe {(s/optional-key :index) s/Str
+                                                (s/optional-key :host) s/Str})}})
 
 (defn validate-schema []
   (when-let [err (s/check StateSchema @app/app-state)]

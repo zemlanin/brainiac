@@ -44,8 +44,8 @@
 (rum/defc filters-component < rum/reactive []
   (let [state (rum/react app/app-state)
         applied (:applied state)
-        doc-type (or (-> state :endpoint :selected :doc-type keyword) :product)
-        filters (-> state :mappings doc-type :properties)]
+        doc-type (-> state :endpoint :selected :doc-type keyword)
+        filters (when doc-type (-> state :mappings doc-type :properties))]
     [:div
       [:ul (for [[n filter-data] (into [] filters)]
                 (match filter-data
