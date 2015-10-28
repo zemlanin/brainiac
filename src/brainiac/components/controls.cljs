@@ -53,8 +53,9 @@
     (swap! app/app-state assoc-in [:settings :fields :cloud] new-cloud)
     (when new-cloud
       (go (try (let [cloud-settings (<? (GET new-cloud))]
-                  (swap! app/app-state assoc :endpoint cloud-settings)
-                  (write-new-field-input new-cloud [:settings :fields :cloud] [:cloud]))
+                  (when-not (s/check (:endpoint schema/StateSchema) cloud-settings)
+                    (swap! app/app-state assoc :endpoint cloud-settings)
+                    (write-new-field-input new-cloud [:settings :fields :cloud] [:cloud])))
             (catch js/Error e
               (swap! app/app-state dissoc :cloud)
               (println e)))))))
