@@ -10,8 +10,7 @@
                           :hits [s/Any]}}
   :mappings {s/Keyword s/Any}
   :cloud s/Str
-  :endpoint {s/Keyword s/Any
-              :selected {:index (s/conditional
+  :endpoint {:selected {:index (s/conditional
                                   empty? s/Str
                                   #(contains? (-> @app/app-state :endpoint :indices) (keyword %)) s/Str)
                           :doc-type s/Str

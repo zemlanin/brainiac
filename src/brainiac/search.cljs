@@ -1,6 +1,7 @@
 (ns ^:figwheel-always brainiac.search
     (:require-macros [cljs.core.async.macros :refer [go]])
-    (:require [brainiac.appstate :as app]
+    (:require [brainiac.utils :as u]
+              [brainiac.appstate :as app]
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :refer [<!]]))
 
@@ -34,7 +35,7 @@
                           {:must (for [[f v] applied]
                             {:term {f v}})}})]
 
-    (when-not (= (:applied prev) (:applied cur))
+    (when-not (u/=in prev cur :applied)
       (go
         (swap! app/app-state assoc :search-result
           (<! (POST (es-endpoint-search)

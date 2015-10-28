@@ -2,6 +2,7 @@
     (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [rum.core :as rum]
               [schema.core :as s :include-macros true]
+              [brainiac.utils :as u]
               [brainiac.appstate :as app]
               [brainiac.schema :as schema]
               [brainiac.search :as search]
@@ -34,8 +35,6 @@
 
 (defn value-has-mappings [[k v]]
   (not (empty? (-> v :mappings))))
-
-(defn tap-n-print [v] (println v) v)
 
 (defn load-indices []
   (let [state @app/app-state
@@ -132,23 +131,22 @@
   (let [modals (:modals @app/app-state)]
     (if (zero? (count modals)) (swap! app/app-state assoc :modals [#'settings-modal]))))
 
-(defn update-controls [_ _ prev cur]
-  (go
-    (when-not (= (:cloud prev) (:cloud cur))
-      (swap! app/app-state assoc :endpoint
-        (<! (GET (:cloud cur)))))
-    ; TODO: optimize requests
-    (when-not (= (-> prev :endpoint :selected) (-> cur :endpoint :selected))
-      (do
-        (load-indices)
-        (search/get-mapping)))))
-
 (rum/defc controls-component []
   [:div
     [:a {:className "action fa fa-gear"
           :onClick display-settings}]
     [:a {:className "action fa fa-upload"
           :onClick export-state}]])
+
+(defn update-controls [_ _ prev cur]
+  (go
+    (when-not (u/=in prev cur :cloud)
+      (swap! app/app-state assoc :endpoint
+        (<! (GET (:cloud cur)))))
+    (when-not (u/=in prev cur :endpoint :selected)
+      (do
+        (search/get-mapping)
+        (when-not (u/=in prev cur :endpoint :selected :host) (load-indices))))))
 
 (defn setup-watcher []
   (when-not (:endpoint @app/app-state) (display-settings))
