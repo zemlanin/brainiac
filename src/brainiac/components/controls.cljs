@@ -18,13 +18,16 @@
         new-cloud (js/prompt "Paste brainiac endpoint" (or cloud ""))]
     (when new-cloud (swap! app/app-state assoc :cloud new-cloud))))
 
+(defn set-doc-type [v]
+  (swap! app/app-state assoc-in [:endpoint :selected :doc-type] v)
+  (search/get-mapping))
+
 (defn change-doc-type [e]
   (when-let [new-doc-type (-> e
                               .-target
                               .-value
-                              (#(if (empty? %) nil %)))]
-      (swap! app/app-state assoc-in [:endpoint :selected :doc-type] (name new-doc-type))
-      (search/get-mapping)))
+                              (#(if (empty? %) nil (name %))))]
+      (set-doc-type new-doc-type)))
 
 (defn key-starts-with-dot [[k v]]
   (.startsWith (name k) "."))
@@ -105,16 +108,17 @@
                   i]))
           ]
 
-        [:label {:className "pure-u-7-24"} "doc_type"
-          [:select {:className "pure-u-23-24"
-                    :value (-> endpoint :selected :doc-type)
-                    :onChange change-doc-type}
-              [:option]
-              (when (-> endpoint :selected :index)
-                (for [doc-type (-> endpoint
-                                    :indices
-                                    ((-> endpoint :selected :index keyword)))]
-                  [:option doc-type]))]]
+        (let [selected-index (-> endpoint :selected :index keyword)
+              doc-types (if selected-index (-> endpoint :indices selected-index) [])]
+          [:label {:className "pure-u-7-24"} "doc_type"
+            [:select {:className "pure-u-23-24"
+                      :value (if (= 1 (count doc-types))
+                                  (first doc-types)
+                                  (-> endpoint :selected :doc-type))
+                      :onChange change-doc-type}
+                [:option]
+                (for [doc-type doc-types]
+                  [:option doc-type])]])
 
         [:div {:className "pure-u-1"}
           [:label {:className "pure-u-1"} "state"
