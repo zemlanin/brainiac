@@ -61,15 +61,8 @@
       (write-new-field-input new-value field-state settings-state)
       (swap! app/app-state assoc-in field-state new-value))))
 
-(defn set-focus
-  ([] (swap! app/app-state update-in [:settings] dissoc :focus))
-  ([k] (swap! app/app-state assoc-in [:settings :focus] k)))
-
 (defn settings-modal  []
-  (let [state @app/app-state
-        {endpoint :endpoint
-          mappings :mappings
-          settings :settings} state]
+  (let [state @app/app-state]
     [:form {:className "pure-form pure-form-stacked"
             :style {:width "60vw"}
             :action "#"}
@@ -80,39 +73,50 @@
           [:div {:className "fa fa-download"}]]
         [:div {:className "pure-u-1-24"}]
 
-        [:label {:className "pure-u-7-24"} "host"
-          [:input {:className "pure-u-23-24"
-                    :type "text"
-                    :value (or (-> settings :host) (-> endpoint :selected :host))
-                    :style {:borderColor (if (:host settings) "red" "green")}
-                    :onChange #(check-field-input % '(:settings :host) '(:endpoint :selected :host))}]]
+        (let [field-path '(:settings :fields :host)
+              saved-path '(:endpoint :selected :host)
+              field-val (get-in state field-path)
+              saved-val (get-in state saved-path)]
+          [:label {:className "pure-u-7-24"} "host"
+            [:input {:className "pure-u-23-24"
+                      :type "text"
+                      :value (or field-val saved-val)
+                      :style {:borderColor (if field-val "red" "green")}
+                      :onChange #(check-field-input % field-path saved-path)}]])
 
-        [:label {:className "pure-u-1-3"} "index"
-          [:input {:className "pure-u-23-24"
-                    :type "text"
-                    :style {:borderColor (if (:index settings) "red" "green")}
-                    :value (or (-> settings :index) (-> endpoint :selected :index))
-                    :onChange #(check-field-input % '(:settings :index) '(:endpoint :selected :index))
-                    :onFocus #(set-focus :index)
-                    :onBlur #(set-focus)}]
-          (when (or (:index settings) (-> endpoint :selected :index empty?))
-            (for [i (->> endpoint
-                          :indices
-                          keys
-                          (map name)
-                          (filter #(if-let [v (:index settings)] (.startsWith % v) true))
-                          (take 3))]
-                [:a {:style {:marginRight "1em"
-                              :textDecoration "underline"}
-                      :onClick #(write-new-field-input i '(:settings :index) '(:endpoint :selected :index))}
-                  i]))
-          ]
+        (let [field-path '(:settings :fields :index)
+              saved-path '(:endpoint :selected :index)
+              field-val (get-in state field-path)
+              saved-val (get-in state saved-path)]
+          [:label {:className "pure-u-1-3"} "index"
+            [:input {:className "pure-u-23-24"
+                      :type "text"
+                      :style {:borderColor (if field-val "red" "green")}
+                      :value (or field-val saved-val)
+                      :onChange #(check-field-input % field-path saved-path)}]
+            (when (or field-val (empty? saved-val))
+              (for [i (->> state
+                            :endpoint
+                            :indices
+                            keys
+                            (map name)
+                            (filter #(if field-val (.startsWith % field-val) true))
+                            (take 3))]
+                  [:a {:style {:marginRight "1em"
+                                :textDecoration "underline"}
+                        :onClick #(write-new-field-input i field-path saved-path)}
+                    i]))])
 
-        (let [selected-index (-> endpoint :selected :index keyword)
-              doc-types (if selected-index (-> endpoint :indices selected-index) [])]
+        (let [field-path '(:settings :fields :doc-type)
+              saved-path '(:endpoint :selected :doc-type)
+              field-val (get-in state field-path)
+              saved-val (get-in state saved-path)
+
+              selected-index (-> state :endpoint :selected :index keyword)
+              doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
           [:label {:className "pure-u-7-24"} "doc_type"
             [:select {:className "pure-u-23-24"
-                      :value (-> endpoint :selected :doc-type)
+                      :value saved-val
                       :onChange change-doc-type}
                 [:option]
                 (for [doc-type doc-types]
