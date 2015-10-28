@@ -9,8 +9,9 @@
       (str "http://" (:host selected) "/" (:index selected))))
 
 (defn es-endpoint-mapping []
-  (when-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]
-      (str (es-endpoint) "/" doc-type "/_mapping")))
+  (if-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]
+      (str (es-endpoint) "/" doc-type "/_mapping")
+      (str (es-endpoint) "/_mapping")))
 
 (defn es-endpoint-search []
   (when-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]

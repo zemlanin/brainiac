@@ -112,9 +112,7 @@
               doc-types (if selected-index (-> endpoint :indices selected-index) [])]
           [:label {:className "pure-u-7-24"} "doc_type"
             [:select {:className "pure-u-23-24"
-                      :value (if (= 1 (count doc-types))
-                                  (first doc-types)
-                                  (-> endpoint :selected :doc-type))
+                      :value (-> endpoint :selected :doc-type)
                       :onChange change-doc-type}
                 [:option]
                 (for [doc-type doc-types]
@@ -136,9 +134,10 @@
       (swap! app/app-state assoc :endpoint
         (<! (GET (:cloud cur)))))
     ; TODO: optimize requests
-    (when-not (= (:endpoint prev) (:endpoint cur))
+    (when-not (= (-> prev :endpoint :selected) (-> cur :endpoint :selected))
+      (do
         (load-indices)
-        (search/get-mapping))))
+        (search/get-mapping)))))
 
 (rum/defc controls-component []
   [:div
