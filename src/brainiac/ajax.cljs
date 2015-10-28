@@ -7,10 +7,15 @@
   (fn [event]
     (go (>! ch event) (close! ch))))
 
+(defn chan-hand-error [ch]
+  (fn [event]
+    (go (>! ch (new js/Error event)) (close! ch))))
+
 (defn GET
   ([url] (GET url {}))
   ([url m] (let [ch (chan 1)]
               (ajax/GET url (merge m {:handler (chan-hand ch)
+                                      :error-handler (chan-hand-error ch)
                                       :response-format :json
                                       :format :json
                                       :keywords? true}))
@@ -20,6 +25,7 @@
   ([url] (POST url {}))
   ([url m] (let [ch (chan 1)]
               (ajax/POST url (merge m {:handler (chan-hand ch)
+                                        :error-handler (chan-hand-error ch)
                                         :response-format :json
                                         :format :json
                                         :keywords? true}))

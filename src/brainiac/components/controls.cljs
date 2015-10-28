@@ -1,5 +1,6 @@
 (ns ^:figwheel-always brainiac.components.controls
-    (:require-macros [cljs.core.async.macros :refer [go]])
+    (:require-macros [cljs.core.async.macros :refer [go]]
+                      [brainiac.macros :refer [<?]])
     (:require [rum.core :as rum]
               [schema.core :as s :include-macros true]
               [brainiac.utils :as u]
@@ -10,14 +11,7 @@
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :refer [<!]]))
 
-(defn export-state []
-  (when-let [new-state (js/prompt "Copy or paste state" (dissoc @app/app-state :search-result))]
-    (reset! app/app-state (read-string new-state))))
-
-(defn cloud-import []
-  (let [cloud (:cloud @app/app-state)
-        new-cloud (js/prompt "Paste brainiac endpoint" (or cloud ""))]
-    (when new-cloud (swap! app/app-state assoc :cloud new-cloud))))
+(def ENTER 13)
 
 (defn set-doc-type [v]
   (swap! app/app-state assoc-in [:endpoint :selected :doc-type] v)
@@ -54,10 +48,26 @@
   (swap! app/app-state assoc-in settings-state new-value)
   (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
 
-(defn check-field-input [e field-state settings-state]
+(defn cloud-import [v]
+  (let [new-cloud (if (.startsWith v "http://") v (str "http://" v))]
+    (swap! app/app-state assoc-in [:settings :fields :cloud] new-cloud)
+    (when new-cloud
+      (go (try (let [cloud-settings (<? (GET new-cloud))]
+                  (swap! app/app-state assoc :endpoint cloud-settings)
+                  (write-new-field-input new-cloud [:settings :fields :cloud] [:cloud]))
+            (catch js/Error e
+              (swap! app/app-state dissoc :cloud)
+              (println e)))))))
+
+(defn check-and-save-field-input [e field-state settings-state]
   (let [new-value (-> e .-target .-value)]
     (if-not (s/check (get-in schema/StateSchema settings-state) new-value)
       (write-new-field-input new-value field-state settings-state)
+      (swap! app/app-state assoc-in field-state new-value))))
+
+(defn check-field-input [e field-state settings-state]
+  (let [new-value (-> e .-target .-value)]
+    (if-not (s/check (get-in schema/StateSchema settings-state) new-value)
       (swap! app/app-state assoc-in field-state new-value))))
 
 (defn settings-modal  []
@@ -67,21 +77,39 @@
             :action "#"}
 
       [:div {:className "pure-g"}
-        [:button {:className "pure-button pure-u-1-24"
-                  :onClick cloud-import}
-          [:div {:className "fa fa-download"}]]
-        [:div {:className "pure-u-1-24"}]
+        (let [field-path '(:settings :fields :cloud)
+              saved-path '(:cloud)
+              field-val (get-in state field-path)
+              saved-val (get-in state saved-path)]
+          [:div {:className "pure-u-1"}
+            [:label {:className "pure-u-1"} [:i "cloud™"] " import"
+                [:div {:className "pure-u-1-24"}]
+                [:input {:className "pure-u-3-4"
+                          :type "text"
+                          :value (or field-val saved-val)
+                          :style {:borderColor (if field-val nil "green")
+                                  :display :inline-block}
+                          :onChange #(check-field-input % field-path saved-path)
+                          :onKeyDown #(when (= ENTER (-> % .-keyCode))
+                                        (do
+                                          (.preventDefault %)
+                                          (cloud-import (-> % .-target .-value))))}]
+                [:div {:className "pure-u-1-24"}]
+                [:button {:className "pure-button"
+                          :onClick #(cloud-import field-val)}
+                [:div {:className "fa fa-download"}]]]]
+              )
 
         (let [field-path '(:settings :fields :host)
               saved-path '(:endpoint :selected :host)
               field-val (get-in state field-path)
               saved-val (get-in state saved-path)]
-          [:label {:className "pure-u-7-24"} "host"
+          [:label {:className "pure-u-1-3"} "host"
             [:input {:className "pure-u-23-24"
                       :type "text"
                       :value (or field-val saved-val)
-                      :style {:borderColor (if field-val "red" "green")}
-                      :onChange #(check-field-input % field-path saved-path)}]])
+                      :style {:borderColor (if field-val "red" (when saved-val "green"))}
+                      :onChange #(check-and-save-field-input % field-path saved-path)}]])
 
         (let [field-path '(:settings :fields :index)
               saved-path '(:endpoint :selected :index)
@@ -90,9 +118,9 @@
           [:label {:className "pure-u-1-3"} "index"
             [:input {:className "pure-u-23-24"
                       :type "text"
-                      :style {:borderColor (if field-val "red" "green")}
+                      :style {:borderColor (if field-val "red" (when saved-val "green"))}
                       :value (or field-val saved-val)
-                      :onChange #(check-field-input % field-path saved-path)}]
+                      :onChange #(check-and-save-field-input % field-path saved-path)}]
             (when (or field-val (empty? saved-val))
               (for [i (->> state
                             :endpoint
@@ -113,8 +141,9 @@
 
               selected-index (-> state :endpoint :selected :index keyword)
               doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
-          [:label {:className "pure-u-7-24"} "doc_type"
-            [:select {:className "pure-u-23-24"
+          [:label {:className "pure-u-1-3"} "doc_type"
+            [:select {:className "pure-u-1"
+                      :style {:borderColor (when saved-val "green")}
                       :value saved-val
                       :onChange change-doc-type}
                 [:option]
@@ -124,7 +153,7 @@
         [:div {:className "pure-u-1"}
           [:label {:className "pure-u-1"} "state"
             [:textarea {:rows 6
-                        :className "pure-u-23-24"
+                        :className "pure-u-1"
                         :value (str state)}]]]]]))
 
 (defn display-settings []
@@ -134,15 +163,10 @@
 (rum/defc controls-component []
   [:div
     [:a {:className "action fa fa-gear"
-          :onClick display-settings}]
-    [:a {:className "action fa fa-upload"
-          :onClick export-state}]])
+          :onClick display-settings}]])
 
 (defn update-controls [_ _ prev cur]
   (go
-    (when-not (u/=in prev cur :cloud)
-      (swap! app/app-state assoc :endpoint
-        (<! (GET (:cloud cur)))))
     (when-not (u/=in prev cur :endpoint :selected)
       (do
         (search/get-mapping)
