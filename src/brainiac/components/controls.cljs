@@ -115,21 +115,28 @@
         (let [field-path '(:settings :fields :index)
               saved-path '(:endpoint :selected :index)
               field-val (get-in state field-path)
-              saved-val (get-in state saved-path)]
+              saved-val (get-in state saved-path)
+
+              suggestions (->> state
+                              :endpoint
+                              :indices
+                              keys
+                              (map name)
+                              (filter #(if field-val (.startsWith % field-val) true))
+                              (take 3))]
           [:label {:className "pure-u-1-3"} "index"
             [:input {:className "pure-u-23-24"
                       :type "text"
                       :style {:borderColor (if field-val "red" (when saved-val "green"))}
                       :value (or field-val saved-val)
-                      :onChange #(check-and-save-field-input % field-path saved-path)}]
+                      :onChange #(check-and-save-field-input % field-path saved-path)
+                      :onKeyDown #(when (= ENTER (-> % .-keyCode))
+                                    (do
+                                      (.preventDefault %)
+                                      (when-let [f-suggestion (first suggestions)]
+                                        (write-new-field-input f-suggestion field-path saved-path))))}]
             (when (or field-val (empty? saved-val))
-              (for [i (->> state
-                            :endpoint
-                            :indices
-                            keys
-                            (map name)
-                            (filter #(if field-val (.startsWith % field-val) true))
-                            (take 3))]
+              (for [i suggestions]
                   [:a {:style {:marginRight "1em"
                                 :textDecoration "underline"}
                         :onClick #(write-new-field-input i field-path saved-path)}
