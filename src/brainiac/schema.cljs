@@ -3,7 +3,8 @@
               [brainiac.appstate :as app]))
 
 (def StateSchema {
-  :applied {s/Keyword s/Bool}
+  :applied {s/Keyword {:type s/Keyword
+                        :value s/Any}}
   :search-result {s/Keyword s/Any
                   :hits {s/Keyword s/Any
                           :total s/Num

@@ -4,7 +4,7 @@
 
 (defn toggle-value [k v]
   (let [applied (:applied @app/app-state)]
-    (swap! app/app-state assoc :applied (assoc applied k (not v)))))
+    (swap! app/app-state assoc :applied (assoc applied k {:type :boolean :value (not v)}))))
 
 (defn remove-value [k]
   (let [applied (:applied @app/app-state)]
@@ -13,13 +13,13 @@
 (rum/defc appliedFilters-component < rum/reactive []
   (let [applied (:applied (rum/react app/app-state))]
     [:div
-      [:ul (for [[k v] applied]
-              (when-not (nil? v)
-                [:li {:key (name k)}
-                    [:a {:className (if v "fa fa-toggle-on" "fa fa-toggle-off")
+      [:ul (for [[k {v :value t :type}] applied]
+              [:li {:key (name k)}
+                    (when (= :boolean t)
+                      [:a {:className (if v "fa fa-toggle-on" "fa fa-toggle-off")
                           :style {:marginRight "0.5em"}
-                          :onClick #(toggle-value k v)}]
+                          :onClick #(toggle-value k v)}])
                     (name k)
                     [:a {:className "fa fa-remove"
                           :style {:marginLeft "0.5em"}
-                          :onClick #(remove-value k)}]]))]]))
+                          :onClick #(remove-value k)}]])]]))

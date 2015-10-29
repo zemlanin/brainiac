@@ -3,7 +3,8 @@
     (:require [brainiac.utils :as u]
               [brainiac.appstate :as app]
               [brainiac.ajax :refer [GET POST]]
-              [cljs.core.async :refer [<!]]))
+              [cljs.core.async :refer [<!]]
+              [cljs.core.match :refer-macros [match]]))
 
 (defn es-endpoint []
   (when-let [selected (-> @app/app-state :endpoint :selected)]
@@ -26,14 +27,20 @@
               es-index
               :mappings)))))
 
+(defn get-filter-cond [[n f]]
+  (match f
+    {:type :boolean :value v} {:term {n v}}
+    {:type :integer :value {:min v}} {:range {n {:gte v}}}
+    {:type :integer :value {:max v}} {:range {n {:lte v}}}
+    :else {:term {n f}}))
+
 (defn perform-search [_ _ prev cur]
   (let [applied (filter #(not (nil? (second %))) (:applied cur))
         filter-cond (case (count applied)
                         0 {}
-                        1 (let [[n v] (first applied)] {:term {n v}})
+                        1 (get-filter-cond (first applied))
                         {:bool
-                          {:must (for [[f v] applied]
-                            {:term {f v}})}})]
+                          {:must (map get-filter-cond applied)}})]
 
     (when-not (u/=in prev cur :applied)
       (go
