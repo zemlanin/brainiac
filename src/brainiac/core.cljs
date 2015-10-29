@@ -15,6 +15,7 @@
 (search/setup-watcher)
 (schema/setup-watcher)
 (controls/setup-watcher)
+(products/setup-watcher)
 
 (rum/mount
   (modals/modals-component)

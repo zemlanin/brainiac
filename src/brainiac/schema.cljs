@@ -19,6 +19,7 @@
                           :host (s/conditional #(.endsWith % ":9200") s/Str)}
               :indices {s/Keyword [s/Keyword]}}
   :modals [s/Any]
+  :instances [{s/Keyword s/Any}]
   :settings {(s/optional-key :fields) (s/maybe {(s/optional-key :cloud) s/Str
                                                 (s/optional-key :index) s/Str
                                                 (s/optional-key :host) s/Str})}})
