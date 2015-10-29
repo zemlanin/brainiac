@@ -18,28 +18,40 @@
     true "true"
     v))
 
+(defn set-applied-value [n v]
+  (let [applied (:applied @app/app-state)
+        new-applied (if (nil? v)
+                        (dissoc applied n)
+                        (assoc applied n v))]
+    (swap! app/app-state assoc :applied new-applied)))
+
 (defn radio-onchange [n e]
   (.preventDefault e)
-  (let [applied (:applied @app/app-state)
-        checked (-> (.-target e) .-value js-str->clj)
-        new-applied (if (nil? checked)
-                        (dissoc applied n)
-                        (assoc applied n checked))]
-    (swap! app/app-state assoc :applied new-applied)))
+  (set-applied-value n (-> e .-target .-value js-str->clj)))
 
 (defn boolean-filter [n v]
   [:fieldset
-    [:legend (name n)]
-    [:ul (for [bool-val [nil false true]]
+    [:legend
+      [:label
+        (name n)
+        (when (some? v) [:a {:class "fa fa-remove"}])
+        [:input {:type :checkbox
+                  :style {:display :none}
+                  :value "null"
+                  :checked (some? v)
+                  :onChange #(when-not (-> % .-target .-checked) (radio-onchange n %))}]]]
+
+    [:ul (for [bool-val [false true]]
             (let [str-val (clj->js-str bool-val)]
               [:li {:key str-val
                     :style {:display "inline"
                             :listStyleType "none"}}
-                [:input {:type "radio"
-                          :checked (= v bool-val)
-                          :onChange #(radio-onchange n %)
-                          :value str-val}
-                  str-val]]))]])
+                [:label
+                  [:input {:type "radio"
+                            :checked (= v bool-val)
+                            :onChange #(radio-onchange n %)
+                            :value str-val}
+                  str-val]]]))]])
 
 (rum/defc filters-component < rum/reactive []
   (let [state (rum/react app/app-state)
