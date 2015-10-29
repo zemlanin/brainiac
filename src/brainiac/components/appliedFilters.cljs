@@ -11,7 +11,7 @@
     (swap! app/app-state assoc :applied (dissoc applied k))))
 
 (rum/defc appliedFilters-component < rum/reactive []
-  (let [applied (:applied (rum/react app/app-state))]
+  (when-let [applied (:applied (rum/react app/app-state))]
     [:div
       [:ul (for [[k {v :value t :type}] applied]
               [:li {:key (name k)}

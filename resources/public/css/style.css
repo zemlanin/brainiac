@@ -1,5 +1,9 @@
 /* some style */
 
+body {
+  background-color: #DFFEE3;
+}
+
 a {
   cursor: pointer;
 }
@@ -42,9 +46,8 @@ a {
 #filters {
   position: absolute;
   top: 0;
-  bottom: 0;
+  bottom: 3.3em;
   width: 100%;
-  padding-bottom: 3em;
   overflow-y: auto;
 }
 
@@ -73,6 +76,7 @@ a {
   bottom: 0;
   background-color: #00A500;
   width: inherit;
+  height: 1.1em;
   font-size: 3em;
   text-align: center;
 }
@@ -87,7 +91,6 @@ a {
 }
 
 #appliedFilters {
-  background-color: #00A500;
 }
 
 #appliedFilters ul {
@@ -95,10 +98,12 @@ a {
 }
 
 #appliedFilters li {
-  display: inline;
+  display: inline-block;
   list-style-type: none;
   margin-right: 0.5em;
+  margin-bottom: 0.7em;
   background-color: white;
   padding: 0.5em;
   border-radius: 1em;
+  box-shadow: 0.1em 0.1em 1em gray;
 }
