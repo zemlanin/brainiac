@@ -14,7 +14,8 @@
                                   empty? s/Str
                                   #(contains? (-> @app/app-state :endpoint :indices) (keyword %)) s/Str)
                           :doc-type s/Str
-                          :host (s/conditional #(= "localhost:9200" %) s/Str)}
+                          ; TODO: check for running ES instance
+                          :host (s/conditional #(.endsWith % ":9200") s/Str)}
               :indices {s/Keyword [s/Keyword]}}
   :modals [s/Any]
   :settings {(s/optional-key :fields) (s/maybe {(s/optional-key :cloud) s/Str

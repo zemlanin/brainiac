@@ -98,8 +98,7 @@
                 [:div {:className "pure-u-1-24"}]
                 [:button {:className "pure-button"
                           :onClick #(cloud-import field-val)}
-                [:div {:className "fa fa-download"}]]]]
-              )
+                [:div {:className "fa fa-download"}]]]])
 
         (let [field-path '(:settings :fields :host)
               saved-path '(:endpoint :selected :host)
