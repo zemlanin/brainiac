@@ -116,13 +116,14 @@
               field-val (get-in state field-path)
               saved-val (get-in state saved-path)
 
-              suggestions (->> state
-                              :endpoint
-                              :indices
-                              keys
-                              (map name)
-                              (filter #(if field-val (.startsWith % field-val) true))
-                              (take 3))]
+              suggestions (when (or field-val (empty? saved-val))
+                            (->> state
+                                :endpoint
+                                :indices
+                                keys
+                                (map name)
+                                (filter #(if field-val (.startsWith % field-val) true))
+                                (take 3)))]
           [:label {:className "pure-u-1-3"} "index"
             [:input {:className "pure-u-23-24"
                       :type "text"
@@ -134,12 +135,11 @@
                                       (.preventDefault %)
                                       (when-let [f-suggestion (first suggestions)]
                                         (write-new-field-input f-suggestion field-path saved-path))))}]
-            (when (or field-val (empty? saved-val))
-              (for [i suggestions]
-                  [:a {:style {:marginRight "1em"
-                                :textDecoration "underline"}
-                        :onClick #(write-new-field-input i field-path saved-path)}
-                    i]))])
+            (for [i suggestions]
+                [:a {:style {:marginRight "1em"
+                              :textDecoration "underline"}
+                      :onClick #(write-new-field-input i field-path saved-path)}
+                  i])])
 
         (let [field-path '(:settings :fields :doc-type)
               saved-path '(:endpoint :selected :doc-type)
