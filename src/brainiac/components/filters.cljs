@@ -102,6 +102,10 @@
                   {:type "boolean"} [:li {:key n} (boolean-filter n (get applied n))]
                   {:type "integer"} [:li {:key n} (integer-filter n (get applied n))]
                   {:type "long"} [:li {:key n} (integer-filter n (get applied n))]
+                  {:index "no"} nil
+                  {:properties _} [:li {:key n
+                                    :style {:color "gray"
+                                            :fontSize "0.6em"}} "obj" (str n)]
                   :else [:li {:key n
                               :style {:color "gray"
-                                      :fontSize "0.6em"}} (:type filter-data) (str n)]))]]))
+                                      :fontSize "0.6em"}} (str filter-data) (str n)]))]]))
