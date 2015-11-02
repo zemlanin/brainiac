@@ -91,6 +91,19 @@
               :value v-max
               :onChange #(integer-onchange n :max %)}]])
 
+(defn match-filter-type [filter-name filter-data value]
+  (match filter-data
+    {:type "boolean"} [:li {:key filter-name} (boolean-filter filter-name value)]
+    {:type "integer"} [:li {:key filter-name} (integer-filter filter-name value)]
+    {:type "long"} [:li {:key filter-name} (integer-filter filter-name value)]
+    {:index "no"} nil
+    {:properties _} [:li {:key filter-name
+                      :style {:color "gray"
+                              :fontSize "0.6em"}} "obj" (str filter-name)]
+    :else [:li {:key filter-name
+                :style {:color "gray"
+                        :fontSize "0.6em"}} (str filter-data) (str filter-name)]))
+
 (rum/defc filters-component < rum/reactive []
   (let [state (rum/react app/app-state)
         applied (:applied state)
@@ -98,14 +111,5 @@
         filters (when doc-type (-> state :mappings doc-type :properties))]
     [:div
       [:ul (for [[n filter-data] (into [] filters)]
-                (match filter-data
-                  {:type "boolean"} [:li {:key n} (boolean-filter n (get applied n))]
-                  {:type "integer"} [:li {:key n} (integer-filter n (get applied n))]
-                  {:type "long"} [:li {:key n} (integer-filter n (get applied n))]
-                  {:index "no"} nil
-                  {:properties _} [:li {:key n
-                                    :style {:color "gray"
-                                            :fontSize "0.6em"}} "obj" (str n)]
-                  :else [:li {:key n
-                              :style {:color "gray"
-                                      :fontSize "0.6em"}} (str filter-data) (str n)]))]]))
+              (match-filter-type n filter-data (get applied n)))]
+  ]))
