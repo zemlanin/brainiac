@@ -53,8 +53,8 @@
     (swap! app/app-state assoc-in [:settings :fields :cloud] new-cloud)
     (when new-cloud
       (go (try (let [cloud-settings (<? (GET new-cloud))]
-                  (when-not (s/check (:endpoint schema/StateSchema) cloud-settings)
-                    (swap! app/app-state assoc :endpoint cloud-settings)
+                  (when-not (s/check schema/CloudEndpointSchema cloud-settings)
+                    (swap! app/app-state assoc-in [:endpoint :selected] cloud-settings)
                     (write-new-field-input new-cloud [:settings :fields :cloud] [:cloud])))
             (catch js/Error e
               (swap! app/app-state dissoc :cloud)
@@ -73,95 +73,102 @@
 
 (defn settings-modal  []
   (let [state @app/app-state]
-    [:form {:className "pure-form pure-form-stacked"
-            :style {:width "60vw"}
-            :action "#"}
+    [:div
+      (let [field-path '(:settings :fields :cloud)
+            saved-path '(:cloud)
+            field-val (get-in state field-path)
+            saved-val (get-in state saved-path)]
+        [:form {:className "pure-form pure-form-stacked"
+                :style {:width "60vw"}
+                :action "#"
+                :onSubmit #(cloud-import (or field-val saved-val))}
 
-      [:div {:className "pure-g"}
-        (let [field-path '(:settings :fields :cloud)
-              saved-path '(:cloud)
-              field-val (get-in state field-path)
-              saved-val (get-in state saved-path)]
+          [:div {:className "pure-g"}
+              [:div {:className "pure-u-1"}
+                [:label {:className "pure-u-1"} [:i "cloud™"] " import"
+                    [:div {:className "pure-u-1-24"}]
+                    [:input {:className "pure-u-3-4"
+                              :type "text"
+                              :id :settings-cloud-save
+                              :value (or field-val saved-val)
+                              :style {:borderColor (if field-val nil "green")
+                                      :display :inline-block}
+                              :autoComplete :on
+                              :onChange #(check-field-input % field-path saved-path)}]
+                    [:div {:className "pure-u-1-24"}]
+                    [:button {:className "pure-button"
+                              :onClick #(cloud-import field-val)}
+                    [:div {:className "fa fa-download"}]]]]]])
+
+      [:form {:className "pure-form pure-form-stacked"
+              :style {:width "60vw"}
+              :action "#"}
+
+        [:div {:className "pure-g"}
+          (let [field-path '(:settings :fields :host)
+                saved-path '(:endpoint :selected :host)
+                field-val (get-in state field-path)
+                saved-val (get-in state saved-path)]
+            [:label {:className "pure-u-1-3"} "host"
+              [:input {:className "pure-u-23-24"
+                        :type "text"
+                        :value (or field-val saved-val)
+                        :style {:borderColor (if field-val "red" (when saved-val "green"))}
+                        :onChange #(check-and-save-field-input % field-path saved-path)}]])
+
+          (let [field-path '(:settings :fields :index)
+                saved-path '(:endpoint :selected :index)
+                field-val (get-in state field-path)
+                saved-val (get-in state saved-path)
+
+                suggestions (when (or field-val (empty? saved-val))
+                              (->> state
+                                  :endpoint
+                                  :indices
+                                  keys
+                                  (map name)
+                                  (filter #(if field-val (.startsWith % field-val) true))
+                                  (take 3)))]
+            [:label {:className "pure-u-1-3"} "index"
+              [:input {:className "pure-u-23-24"
+                        :type "text"
+                        :style {:borderColor (if field-val "red" (when saved-val "green"))}
+                        :value (or field-val saved-val)
+                        :onChange #(check-and-save-field-input % field-path saved-path)
+                        :onKeyDown #(when (= ENTER (-> % .-keyCode))
+                                      (do
+                                        (.preventDefault %)
+                                        (when-let [f-suggestion (first suggestions)]
+                                          (write-new-field-input f-suggestion field-path saved-path))))}]
+              (for [i suggestions]
+                  [:a {:style {:marginRight "1em"
+                                :textDecoration "underline"}
+                        :onClick #(write-new-field-input i field-path saved-path)}
+                    i])])
+
+          (let [field-path '(:settings :fields :doc-type)
+                saved-path '(:endpoint :selected :doc-type)
+                field-val (get-in state field-path)
+                saved-val (get-in state saved-path)
+
+                selected-index (-> state :endpoint :selected :index keyword)
+                doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
+            [:label {:className "pure-u-1-3"} "doc_type"
+              [:select {:className "pure-u-1"
+                        :style {:borderColor (when saved-val "green")}
+                        :value saved-val
+                        :onChange change-doc-type}
+                  [:option]
+                  (for [doc-type doc-types]
+                    [:option doc-type])]])
+
           [:div {:className "pure-u-1"}
-            [:label {:className "pure-u-1"} [:i "cloud™"] " import"
-                [:div {:className "pure-u-1-24"}]
-                [:input {:className "pure-u-3-4"
-                          :type "text"
-                          :value (or field-val saved-val)
-                          :style {:borderColor (if field-val nil "green")
-                                  :display :inline-block}
-                          :onChange #(check-field-input % field-path saved-path)
-                          :onKeyDown #(when (= ENTER (-> % .-keyCode))
-                                        (do
-                                          (.preventDefault %)
-                                          (cloud-import (-> % .-target .-value))))}]
-                [:div {:className "pure-u-1-24"}]
-                [:button {:className "pure-button"
-                          :onClick #(cloud-import field-val)}
-                [:div {:className "fa fa-download"}]]]])
-
-        (let [field-path '(:settings :fields :host)
-              saved-path '(:endpoint :selected :host)
-              field-val (get-in state field-path)
-              saved-val (get-in state saved-path)]
-          [:label {:className "pure-u-1-3"} "host"
-            [:input {:className "pure-u-23-24"
-                      :type "text"
-                      :value (or field-val saved-val)
-                      :style {:borderColor (if field-val "red" (when saved-val "green"))}
-                      :onChange #(check-and-save-field-input % field-path saved-path)}]])
-
-        (let [field-path '(:settings :fields :index)
-              saved-path '(:endpoint :selected :index)
-              field-val (get-in state field-path)
-              saved-val (get-in state saved-path)
-
-              suggestions (when (or field-val (empty? saved-val))
-                            (->> state
-                                :endpoint
-                                :indices
-                                keys
-                                (map name)
-                                (filter #(if field-val (.startsWith % field-val) true))
-                                (take 3)))]
-          [:label {:className "pure-u-1-3"} "index"
-            [:input {:className "pure-u-23-24"
-                      :type "text"
-                      :style {:borderColor (if field-val "red" (when saved-val "green"))}
-                      :value (or field-val saved-val)
-                      :onChange #(check-and-save-field-input % field-path saved-path)
-                      :onKeyDown #(when (= ENTER (-> % .-keyCode))
-                                    (do
-                                      (.preventDefault %)
-                                      (when-let [f-suggestion (first suggestions)]
-                                        (write-new-field-input f-suggestion field-path saved-path))))}]
-            (for [i suggestions]
-                [:a {:style {:marginRight "1em"
-                              :textDecoration "underline"}
-                      :onClick #(write-new-field-input i field-path saved-path)}
-                  i])])
-
-        (let [field-path '(:settings :fields :doc-type)
-              saved-path '(:endpoint :selected :doc-type)
-              field-val (get-in state field-path)
-              saved-val (get-in state saved-path)
-
-              selected-index (-> state :endpoint :selected :index keyword)
-              doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
-          [:label {:className "pure-u-1-3"} "doc_type"
-            [:select {:className "pure-u-1"
-                      :style {:borderColor (when saved-val "green")}
-                      :value saved-val
-                      :onChange change-doc-type}
-                [:option]
-                (for [doc-type doc-types]
-                  [:option doc-type])]])
-
-        [:div {:className "pure-u-1"}
-          [:label {:className "pure-u-1"} "state"
-            [:textarea {:rows 6
-                        :className "pure-u-1"
-                        :value (str state)}]]]]]))
+            [:label {:className "pure-u-1"} "state"
+              [:textarea {:rows 6
+                          :className "pure-u-1"
+                          :value (str state)}]]]]]
+    ]
+    ))
 
 (defn display-settings []
   (let [modals (:modals @app/app-state)]

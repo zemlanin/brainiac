@@ -2,6 +2,11 @@
     (:require [schema.core :as s :include-macros true]
               [brainiac.appstate :as app]))
 
+(def CloudEndpointSchema {:index  s/Str
+                          :docTypes {s/Keyword s/Any}
+                          ; TODO: check for running ES instance
+                          :host s/Str})
+
 (def StateSchema {
   :applied {s/Keyword {:type s/Keyword
                         :value s/Any}}
@@ -15,6 +20,7 @@
                                   empty? s/Str
                                   #(contains? (-> @app/app-state :endpoint :indices) (keyword %)) s/Str)
                           :doc-type s/Str
+                          :docTypes {s/Keyword s/Any}
                           ; TODO: check for running ES instance
                           :host (s/conditional #(.endsWith % ":9200") s/Str)}
               :indices {s/Keyword [s/Keyword]}}
