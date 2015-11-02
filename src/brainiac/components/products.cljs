@@ -40,7 +40,7 @@
         display-fn ;(case (-> state :display-fn)
                     ;  :source es-source-component
                     ;  es-source-component)
-                    (if (-> state :display-pretty)
+                    (if (and (-> state :display-pretty) (-> state :cloud :instance-mapper :url))
                       pretty-component
                       es-source-component)]
     [:div {:className "pure-g"}
