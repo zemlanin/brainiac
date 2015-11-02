@@ -183,18 +183,24 @@
             [:label {:className "pure-u-1"} "state"
               [:textarea {:rows 6
                           :className "pure-u-1"
-                          :value (str state)}]]]]]
-    ]
-    ))
+                          :value (str state)}]]]]]]))
 
 (defn display-settings []
   (let [modals (:modals @app/app-state)]
     (if (zero? (count modals)) (swap! app/app-state assoc :modals [#'settings-modal]))))
 
-(rum/defc controls-component []
-  [:div
-    [:a {:className "action fa fa-gear"
-          :onClick display-settings}]])
+(defn toggle-source [e]
+  (swap! app/app-state assoc :display-pretty (-> @app/app-state :display-pretty not)))
+
+(rum/defc controls-component < rum/reactive []
+  (let [state (rum/react app/app-state)]
+    [:div
+      [:a {:className "action fa fa-newspaper-o"
+            :style (when-not (-> state :cloud :instance-mapper) {:color :gray
+                                                                  :cursor :auto})
+            :onClick #(when (-> state :cloud :instance-mapper) (toggle-source %))}]
+      [:a {:className "action fa fa-gear"
+            :onClick display-settings}]]))
 
 (defn update-controls [_ _ prev cur]
   (go

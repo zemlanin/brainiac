@@ -2,17 +2,23 @@
     (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [rum.core :as rum]
               [brainiac.utils :as u]
+              [brainiac.ajax :refer [GET]]
               [clojure.string :as str]
               [cljs.core.async :refer [>! chan close!]]
               [cljs.pprint :refer [pprint]]
               [brainiac.appstate :as app]))
 
-(defn product-component [{id :id n :name :as data}]
+(defn pretty-component [{id :id image :image n :name url :url :as data}]
   [:div {:key id
           :className "pure-u-1-3"}
-    id " / " n])
+    (if url
+      [:a {:href url
+            :target :_blank}
+        id " / " n [:img {:src image}]]
+      [:div
+        id " / " n [:img {:src image}]])])
 
-(defn es-source-component [{id :id :as data}]
+(defn es-source-component [{{id :_id :as data} :source :as d}]
   (let [pdata (-> data pprint with-out-str (str/split "\n"))]
     [:div {:key id
             :className "pure-u-1-3"}
@@ -31,8 +37,11 @@
         search-result (-> state :search-result)
         instances (-> state :instances)
         total (-> state :search-result :hits :total)
-        display-fn (case (-> state :display-fn)
-                      :source es-source-component
+        display-fn ;(case (-> state :display-fn)
+                    ;  :source es-source-component
+                    ;  es-source-component)
+                    (if (-> state :display-pretty)
+                      pretty-component
                       es-source-component)]
     [:div {:className "pure-g"}
       [:h3 {:className "pure-u-1"} (if total (str "documents / " total) "documents")]
@@ -40,12 +49,16 @@
 
 (defn instance-mapper [state]
   (let [ch (chan 1)
-        hits (-> state :search-result :hits :hits)]
+        hits (-> state :search-result :hits :hits)
+        hits-map (into {} (for [h hits] [(-> h :_id js/parseInt) h]))
+        ids (keys hits-map)]
     (go
-      (>! ch
-        (map
-          #(assoc (:_source %) :id (:_id %))
-          hits)))
+      (if-let [url (-> state :cloud :instance-mapper :url)]
+        (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
+                  (for [r (-> cloud-response :instances)]
+                    (assoc r :source (get hits-map (:id r))))))
+        (>! ch (map #(assoc {} :source %) hits)))
+        )
     ch))
 
 (defn instance-mapper-watcher [_ _ prev cur]
