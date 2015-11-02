@@ -11,14 +11,23 @@
 (defn pretty-component [{id :id image :image n :name url :url :as data}]
   [:div {:key id
           :className "pure-u-1-3"}
-    (if url
-      [:a {:href url
-            :target :_blank}
-        id " / " n [:img {:src image}]]
-      [:div
-        id " / " n [:img {:src image}]])])
+    [:div {:style {:fontFamily :monospace
+                    :background :white
+                    :boxShadow "0.5em 0.5em 2em 0.1em gray"
+                    :margin "1em"
+                    :padding "0.5em"}}
+      (if url
+        [:a {:href url
+              :target :_blank}
+          id
+          [:br]
+          [:img {:src image :height 200 :width 200}]]
+        [:div
+          id
+          [:br]
+          [:img {:src image}]])]])
 
-(defn es-source-component [{{id :_id :as data} :source :as d}]
+(defn es-source-component [{{id :_id} :es :as data}]
   (let [pdata (-> data pprint with-out-str (str/split "\n"))]
     [:div {:key id
             :className "pure-u-1-3"}
@@ -56,8 +65,8 @@
       (if-let [url (-> state :cloud :instance-mapper :url)]
         (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
                   (for [r (-> cloud-response :instances)]
-                    (assoc r :source (get hits-map (:id r))))))
-        (>! ch (map #(assoc {} :source %) hits)))
+                    (assoc r :es (get hits-map (:id r))))))
+        (>! ch (map #(assoc {} :es %) hits)))
         )
     ch))
 
