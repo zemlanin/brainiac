@@ -107,3 +107,16 @@ a {
   border-radius: 1em;
   box-shadow: 0.1em 0.1em 1em gray;
 }
+
+#products ul.thumbs-list {
+  height: 60px;
+  list-style: none;
+  display: flex;
+  padding: 0;
+  overflow-x: scroll;
+  overflow-y: hidden;
+}
+
+#products ul.thumbs-list li {
+  padding: 0 0.2em;
+}

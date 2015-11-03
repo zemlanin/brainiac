@@ -8,7 +8,7 @@
               [cljs.pprint :refer [pprint]]
               [brainiac.appstate :as app]))
 
-(defn pretty-component [{id :id image :image n :name url :url :as data}]
+(defn pretty-component [{id :id image :image n :name url :url images :images :as data}]
   [:div {:key id
           :className "pure-u-1-3"}
     [:div {:style {:fontFamily :monospace
@@ -16,16 +16,29 @@
                     :boxShadow "0.5em 0.5em 2em 0.1em gray"
                     :margin "1em"
                     :padding "0.5em"}}
-      (if url
-        [:a {:href url
-              :target :_blank}
-          id
-          [:br]
-          [:img {:src image :height 200 :width 200}]]
-        [:div
-          id
-          [:br]
-          [:img {:src image}]])]])
+      [:div {:className "pure-g"}
+        [:div {:className "pure-u-1"}
+          (if url
+            [:a {:href url :target :_blank} [:b n]]
+            [:b n])
+          [:i " (" id ")"]]
+        [:div {:className "pure-u-1-3"
+                :style {:textAlign :center}}
+          (if url
+            [:a {:href url :target :_blank}
+              [:img {:src image
+                      :style {:maxHeight 200 :maxWidth "100%"}}]]
+            [:img {:src image
+                      :style {:maxHeight 200 :maxWidth "100%"}}])
+          (if images
+            [:ul {:className "thumbs-list"} (for [i images]
+              [:li [:img {:src i}]])])]
+        [:div {:className "pure-u-1-24"}]
+        [:div {:className "pure-u-15-24"
+                :style {:maxHeight 200 :overflow :auto}}
+          (:description data)]
+          ]
+                  ]])
 
 (defn es-source-component [{{id :_id} :es :as data}]
   (let [pdata (-> data pprint with-out-str (str/split "\n"))]
