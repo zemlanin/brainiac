@@ -30,15 +30,13 @@
                       :style {:maxHeight 200 :maxWidth "100%"}}]]
             [:img {:src image
                       :style {:maxHeight 200 :maxWidth "100%"}}])
-          (if images
+          (when (< 1 (count images))
             [:ul {:className "thumbs-list"} (for [i images]
               [:li [:img {:src i}]])])]
         [:div {:className "pure-u-1-24"}]
         [:div {:className "pure-u-15-24"
                 :style {:maxHeight 200 :overflow :auto}}
-          (:description data)]
-          ]
-                  ]])
+          (:description data)]]]])
 
 (defn es-source-component [{{id :_id} :es :as data}]
   (let [pdata (-> data pprint with-out-str (str/split "\n"))]
