@@ -73,6 +73,7 @@ a {
 
 #controls {
   position: fixed;
+  -webkit-transform: translateZ(0);
   bottom: 0;
   background-color: #00A500;
   width: inherit;
@@ -115,6 +116,7 @@ a {
   padding: 0;
   overflow-x: scroll;
   overflow-y: hidden;
+  -webkit-transform: translateZ(0);
 }
 
 #products ul.thumbs-list li {

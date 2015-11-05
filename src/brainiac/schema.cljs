@@ -2,11 +2,6 @@
     (:require [schema.core :as s :include-macros true]
               [brainiac.appstate :as app]))
 
-(def CloudEndpointSchema {:index  s/Str
-                          :doc-type s/Str
-                          ; TODO: check for running ES instance
-                          :host s/Str})
-
 (def StateSchema {
   :applied {s/Keyword {:type s/Keyword
                         :value s/Any}}

@@ -48,27 +48,11 @@
   (swap! app/app-state assoc-in settings-state new-value)
   (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
 
-(defn cloud-import [v]
-  (when v
-    (let [new-cloud (if (.startsWith v "http://") v (str "http://" v))]
-      (swap! app/app-state assoc-in [:settings :fields :cloud] new-cloud)
-      (go (try (let [raw (<? (GET new-cloud))
-                      cloud-settings (-> raw
-                                          (assoc :doc-type (-> raw :docType :name))
-                                          (dissoc :docType))]
-                  (when-not (s/check schema/CloudEndpointSchema cloud-settings)
-                    (swap! app/app-state assoc-in [:cloud :instance-mapper] (-> raw :docType :instanceMapper))
-                    (swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
-                    (swap! app/app-state assoc-in [:endpoint :selected] cloud-settings)
-                    (write-new-field-input new-cloud [:settings :fields :cloud] [:cloud :url])))
-            (catch js/Error e
-              (swap! app/app-state dissoc :cloud)
-              (println e)))))))
-
-(defn remove-cloud-import []
-  (when-let [old-cloud (-> @app/app-state :cloud :url)]
-    (swap! app/app-state assoc-in [:settings :fields :cloud] old-cloud))
-  (swap! app/app-state dissoc :cloud))
+(defn cloud-import [{instance-mapper :instance-mapper :as v}]
+  (swap! app/app-state assoc-in [:cloud :instance-mapper] instance-mapper)
+  ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
+  (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
+  )
 
 (defn check-and-save-field-input [e field-state settings-state]
   (let [new-value (-> e .-target .-value)]
@@ -80,40 +64,15 @@
   (let [new-value (-> e .-target .-value)]
     (swap! app/app-state assoc-in field-state new-value)))
 
+(def endpoint-shortcuts [
+  {:name "localhost"
+    :host "localhost:9200"
+    :index "uaprom2_brainiac"
+    :doc-type "product"}])
+
 (defn settings-modal  []
   (let [state @app/app-state]
     [:div
-      (let [field-path '(:settings :fields :cloud)
-            saved-path '(:cloud :url)
-            field-val (get-in state field-path)
-            saved-val (get-in state saved-path)]
-        [:form {:className "pure-form pure-form-stacked"
-                :style {:width "60vw"}
-                :action "#"
-                :onSubmit #(cloud-import (or field-val saved-val))}
-
-          [:div {:className "pure-g"}
-              [:div {:className "pure-u-1"}
-                [:label {:className "pure-u-1"} [:i "cloud™"] " import"
-                    [:div {:className "pure-u-1-24"}]
-                    [:input {:className "pure-u-2-3"
-                              :type "text"
-                              :id :settings-cloud-save
-                              :value (or field-val saved-val)
-                              :style {:borderColor (if field-val nil "green")
-                                      :display :inline-block}
-                              :autoComplete :on
-                              :onChange #(check-field-input % field-path saved-path)}]
-                    [:div {:className "pure-u-1-24"}]
-                    [:button {:className "pure-button"
-                              :onClick #(cloud-import field-val)}
-                      [:div {:className "fa fa-download"}]]
-                    [:div {:className "pure-u-1-24"}]
-                    (when saved-val
-                      [:div {:className "pure-button"
-                              :onClick #(remove-cloud-import)}
-                      [:div {:className "fa fa-remove"}]])]]]])
-
       [:form {:className "pure-form pure-form-stacked"
               :style {:width "60vw"}
               :action "#"}
@@ -125,7 +84,6 @@
                 saved-val (get-in state saved-path)]
             [:label {:className "pure-u-1-3"} "host"
               [:input {:className "pure-u-23-24"
-                        :disabled (-> state :cloud some?)
                         :type "text"
                         :value (or field-val saved-val)
                         :style {:borderColor (if field-val "red" (when saved-val "green"))}
@@ -147,7 +105,6 @@
             [:label {:className "pure-u-1-3"} "index"
               [:input {:className "pure-u-23-24"
                         :type "text"
-                        :disabled (-> state :cloud some?)
                         :style {:borderColor (if field-val "red" (when saved-val "green"))}
                         :value (or field-val saved-val)
                         :onChange #(check-and-save-field-input % field-path saved-path)
@@ -171,13 +128,19 @@
                 doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
             [:label {:className "pure-u-1-3"} "doc_type"
               [:select {:className "pure-u-1"
-                        :disabled (-> state :cloud some?)
                         :style {:borderColor (when saved-val "green")}
                         :value saved-val
                         :onChange change-doc-type}
                   [:option]
                   (for [doc-type doc-types]
                     [:option doc-type])]])
+
+        [:div {:className "pure-g"}
+            [:div {:className "pure-u-1"}
+              [:ul nil (for [sh endpoint-shortcuts]
+                [:li
+                  [:a {:onClick #(cloud-import sh)} (:name sh)]])]
+              ]]
 
           [:div {:className "pure-u-1"}
             [:label {:className "pure-u-1"} "state"

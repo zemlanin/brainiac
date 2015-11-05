@@ -35,7 +35,10 @@
               [:li [:img {:src i}]])])]
         [:div {:className "pure-u-1-24"}]
         [:div {:className "pure-u-15-24"
-                :style {:maxHeight 200 :overflow :auto}}
+                :style {
+                  :maxHeight 200
+                  :overflow :auto
+                  :WebkitTransform "translateZ(0)"}}
           (:description data)]]]])
 
 (defn es-source-component [{{id :_id} :es :as data}]
@@ -46,6 +49,8 @@
                       :background :white
                       :boxShadow "0.5em 0.5em 2em 0.1em gray"
                       :margin "1em"
+                      :overflow :auto
+                      :WebkitTransform "translateZ(0)"
                       :padding "0.5em"}}
         (for [line pdata]
           [:span
@@ -60,7 +65,7 @@
         display-fn ;(case (-> state :display-fn)
                     ;  :source es-source-component
                     ;  es-source-component)
-                    (if (and (-> state :display-pretty) (-> state :cloud :instance-mapper :url))
+                    (if (and (-> state :display-pretty) (-> state :cloud :instance-mapper))
                       pretty-component
                       es-source-component)]
     [:div {:className "pure-g"}
@@ -73,7 +78,7 @@
         hits-map (into {} (for [h hits] [(-> h :_id js/parseInt) h]))
         ids (keys hits-map)]
     (go
-      (if-let [url (-> state :cloud :instance-mapper :url)]
+      (if-let [url (-> state :cloud :instance-mapper)]
         (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
                   (for [r (-> cloud-response :instances)]
                     (assoc r :es (get hits-map (:id r))))))
