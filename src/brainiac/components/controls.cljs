@@ -13,6 +13,14 @@
 
 (def ENTER 13)
 
+(def endpoint-shortcuts [
+  {:name "localhost"
+    :host "localhost:9200"
+    :index "uaprom2_brainiac"
+    :doc-type "product"
+    :instance-mapper "http://example.com:5000/brainiac/products_mapper"}
+  ])
+
 (defn set-doc-type [v]
   (swap! app/app-state assoc-in [:endpoint :selected :doc-type] v)
   (search/get-mapping))
@@ -63,12 +71,6 @@
 (defn check-field-input [e field-state settings-state]
   (let [new-value (-> e .-target .-value)]
     (swap! app/app-state assoc-in field-state new-value)))
-
-(def endpoint-shortcuts [
-  {:name "localhost"
-    :host "localhost:9200"
-    :index "uaprom2_brainiac"
-    :doc-type "product"}])
 
 (defn settings-modal  []
   (let [state @app/app-state]

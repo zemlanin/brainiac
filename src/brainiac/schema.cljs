@@ -9,13 +9,13 @@
                   :hits {s/Keyword s/Any
                           :total s/Num
                           :hits [s/Any]}}
+  :display-pretty s/Bool
   :mappings {s/Keyword s/Any}
-  :cloud s/Str
+  :cloud {:instance-mapper s/Str}
   :endpoint {:selected {:index (s/conditional
                                   empty? s/Str
                                   #(contains? (-> @app/app-state :endpoint :indices) (keyword %)) s/Str)
                           :doc-type s/Str
-                          :docTypes {s/Keyword s/Any}
                           ; TODO: check for running ES instance
                           :host (s/conditional #(.endsWith % ":9200") s/Str)}
               :indices {s/Keyword [s/Keyword]}}
