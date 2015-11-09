@@ -1,14 +1,19 @@
 (ns ^:figwheel-always brainiac.components.appliedFilters
+    (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [rum.core :as rum]
-              [brainiac.appstate :as app]))
+              [brainiac.appstate :as app]
+              [cljs.core.async :refer [>!]]
+              [brainiac.search :as search]))
 
 (defn toggle-value [k v]
   (let [applied (:applied @app/app-state)]
-    (swap! app/app-state assoc :applied (assoc applied k {:type :boolean :value (not v)}))))
+    (swap! app/app-state assoc :applied (assoc applied k {:type :boolean :value (not v)}))
+    (go (>! search/req-chan {}))))
 
 (defn remove-value [k]
   (let [applied (:applied @app/app-state)]
-    (swap! app/app-state assoc :applied (dissoc applied k))))
+    (swap! app/app-state assoc :applied (dissoc applied k))
+    (go (>! search/req-chan {}))))
 
 (rum/defc appliedFilters-component < rum/reactive []
   (when-let [applied (:applied (rum/react app/app-state))]

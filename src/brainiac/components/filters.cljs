@@ -1,6 +1,8 @@
 (ns ^:figwheel-always brainiac.components.filters
+    (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [rum.core :as rum]
               [brainiac.appstate :as app]
+              [brainiac.search :as search]
               [cljs.core.async :refer [>! <! put! chan]]
               [cljs.core.match :refer-macros [match]]))
 
@@ -26,7 +28,8 @@
         new-value (if (nil? v) nil {:type :boolean :value v})]
     (if (some? new-value)
       (swap! app/app-state assoc-in [:applied n] new-value)
-      (swap! app/app-state assoc :applied (dissoc applied n)))))
+      (swap! app/app-state assoc :applied (dissoc applied n)))
+    (go (>! search/req-chan {}))))
 
 (defn integer-onchange [n t e]
     (.preventDefault e)
@@ -42,7 +45,8 @@
                         :else nil))]
       (if (some? new-value)
         (swap! app/app-state assoc-in [:applied n] new-value)
-        (swap! app/app-state assoc :applied (dissoc applied n)))))
+        (swap! app/app-state assoc :applied (dissoc applied n)))
+        (go (>! search/req-chan {}))))
 
 (defn string-onchange [n e]
   (.preventDefault e)
@@ -54,7 +58,8 @@
                     {:type :string :value v})]
     (if (some? new-value)
       (swap! app/app-state assoc-in [:applied n] new-value)
-      (swap! app/app-state assoc :applied (dissoc applied n)))))
+      (swap! app/app-state assoc :applied (dissoc applied n)))
+    (go (>! search/req-chan {}))))
 
 (defn boolean-filter [n {v :value}]
   [:fieldset
