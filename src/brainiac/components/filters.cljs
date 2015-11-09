@@ -43,6 +43,7 @@
                         [(_ :guard #(-> % js/parseInt js/isNaN not)) _] (assoc-in old-value [:value t] (js/parseInt v))
                         ; TODO: save another value when another is removed
                         :else nil))]
+          (println v old-value new-value)
       (if (some? new-value)
         (swap! app/app-state assoc-in [:applied n] new-value)
         (swap! app/app-state assoc :applied (dissoc applied n)))
