@@ -44,6 +44,17 @@
         (swap! app/app-state assoc-in [:applied n] new-value)
         (swap! app/app-state assoc :applied (dissoc applied n)))))
 
+(defn string-onchange [n e]
+  (.preventDefault e)
+  (let [applied (:applied @app/app-state)
+        old-value (n applied)
+        v (-> e .-target .-value)
+        new-value (if (empty? v)
+                    nil
+                    {:type :string :value v})]
+    (if (some? new-value)
+      (swap! app/app-state assoc-in [:applied n] new-value)
+      (swap! app/app-state assoc :applied (dissoc applied n)))))
 
 (defn boolean-filter [n {v :value}]
   [:fieldset
@@ -91,11 +102,28 @@
               :value v-max
               :onChange #(integer-onchange n :max %)}]])
 
+(defn string-filter [n {v :value}]
+  [:fieldset
+    [:legend
+      [:label
+        (name n)
+        (when v [:a {:class "fa fa-remove"}])
+        [:input {:type :checkbox
+                  :style {:display :none}
+                  :value ""
+                  :checked v
+                  :onChange #(when-not (-> % .-target .-checked) (string-onchange n %))}]]]
+
+    [:input {:style {:width "80%"}
+              :value v
+              :onChange #(string-onchange n %)}]])
+
 (defn match-filter-type [filter-name filter-data value]
   (match filter-data
     {:type "boolean"} [:li {:key filter-name} (boolean-filter filter-name value)]
     {:type "integer"} [:li {:key filter-name} (integer-filter filter-name value)]
     {:type "long"} [:li {:key filter-name} (integer-filter filter-name value)]
+    {:type "string"} [:li {:key filter-name} (string-filter filter-name value)]
     {:index "no"} nil
     {:properties _} [:li {:key filter-name
                       :style {:color "gray"

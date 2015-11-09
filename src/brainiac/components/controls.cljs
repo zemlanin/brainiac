@@ -18,7 +18,8 @@
     :host "localhost:9200"
     :index "uaprom2_brainiac"
     :doc-type "product"
-    :instance-mapper "http://example.com:5000/brainiac/products_mapper"}
+    :instance-mapper "http://example.com:5000/brainiac/products_mapper"
+    :suggesters {:category_ids "https://httpbin.org/get?name={}&id=2829"}}
   ])
 
 (defn set-doc-type [v]

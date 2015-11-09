@@ -32,15 +32,23 @@
     {:type :boolean :value v} {:term {n v}}
     {:type :integer :value {:min v}} {:range {n {:gte v}}}
     {:type :integer :value {:max v}} {:range {n {:lte v}}}
-    :else {:term {n f}}))
+    :else nil))
+
+(defn get-match-cond [[n f]]
+  (match f
+    {:type :string :value v} {n v}
+    :else nil))
 
 (defn perform-search [_ _ prev cur]
   (let [applied (filter #(not (nil? (second %))) (:applied cur))
-        filter-cond (case (count applied)
+        applied-filtered (filter some? (map get-filter-cond applied))
+        applied-match (filter some? (map get-match-cond applied))
+        filter-cond (case (count applied-filtered)
                         0 {}
-                        1 (get-filter-cond (first applied))
+                        1 (first applied-filtered)
                         {:bool
-                          {:must (map get-filter-cond applied)}})]
+                          {:must applied-filtered}})
+        match-cond (into {} applied-match)]
 
     (when-not (u/=in prev cur :applied)
       (go
@@ -48,8 +56,9 @@
           (<! (POST (es-endpoint-search)
                         {:params
                           {:query
-                            {:filtered
-                              {:filter filter-cond}}}})))))))
+                            {:filtered {
+                              :filter filter-cond
+                              :query {:match match-cond}}}}})))))))
 
 (defn setup-watcher []
   (get-mapping)
