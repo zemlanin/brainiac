@@ -43,7 +43,6 @@
                         [(_ :guard #(-> % js/parseInt js/isNaN not)) _] (assoc-in old-value [:value t] (js/parseInt v))
                         ; TODO: save another value when another is removed
                         :else nil))]
-          (println v old-value new-value)
       (if (some? new-value)
         (swap! app/app-state assoc-in [:applied n] new-value)
         (swap! app/app-state assoc :applied (dissoc applied n)))
@@ -57,6 +56,28 @@
         new-value (if (empty? v)
                     nil
                     {:type :string :value v})]
+    (if (some? new-value)
+      (swap! app/app-state assoc-in [:applied n] new-value)
+      (swap! app/app-state assoc :applied (dissoc applied n)))
+    (go (>! search/req-chan {}))))
+
+(defn categories-onchange [n e]
+  (.preventDefault e)
+  (let [applied (:applied @app/app-state)
+        old-value (n applied)
+        v (-> e .-target .-value)
+        new-value (if (empty? v)
+                    nil
+                    {:type :obj :value {:name v} :obj-field :id})]
+    (if (some? new-value)
+      (swap! app/app-state assoc-in [:applied n] new-value)
+      (swap! app/app-state assoc :applied (dissoc applied n)))
+    (go (>! search/cats-chan {}))))
+
+(defn categories-suggestion-onclick [n v]
+  (let [applied (:applied @app/app-state)
+        old-value (n applied)
+        new-value {:type :obj :value v :obj-field :id}]
     (if (some? new-value)
       (swap! app/app-state assoc-in [:applied n] new-value)
       (swap! app/app-state assoc :applied (dissoc applied n)))
@@ -124,16 +145,40 @@
               :value v
               :onChange #(string-onchange n %)}]])
 
+(defn categories-filter [n {v :value}]
+  (let [state @app/app-state
+        suggestions (-> state :search-result :categories-suggestions)]
+
+    [:fieldset
+      [:legend
+        [:label
+          (name n)
+          (when (:id v) [:a {:class "fa fa-remove"}])
+          [:input {:type :checkbox
+                    :style {:display :none}
+                    :value ""
+                    :checked (:id v)
+                    :onChange #(when-not (-> % .-target .-checked) (categories-onchange n %))}]]]
+
+      [:input {:style {:width "80%"}
+                :value (:name v)
+                :onChange #(categories-onchange n %)}]
+      [:ul (for [s (take 10 suggestions)]
+              [:li [:a
+                      {:onClick #(categories-suggestion-onclick n s)}
+                      (:name s) "/" (:id s)]])]]))
+
 (defn match-filter-type [filter-name filter-data value]
-  (match filter-data
-    {:type "boolean"} [:li {:key filter-name} (boolean-filter filter-name value)]
-    {:type "integer"} [:li {:key filter-name} (integer-filter filter-name value)]
-    {:type "long"} [:li {:key filter-name} (integer-filter filter-name value)]
-    {:type "string"} [:li {:key filter-name} (string-filter filter-name value)]
-    {:index "no"} nil
-    {:properties _} [:li {:key filter-name
-                      :style {:color "gray"
-                              :fontSize "0.6em"}} "obj" (str filter-name)]
+  (match [filter-name filter-data]
+    [:categories {:properties _}] [:li {:key filter-name} (categories-filter filter-name value)]
+    [_ {:type "boolean"}] [:li {:key filter-name} (boolean-filter filter-name value)]
+    [_ {:type "integer"}] [:li {:key filter-name} (integer-filter filter-name value)]
+    [_ {:type "long"}] [:li {:key filter-name} (integer-filter filter-name value)]
+    [_ {:type "string"}] [:li {:key filter-name} (string-filter filter-name value)]
+    [_ {:index "no"}] nil
+    [_ {:properties _}] [:li {:key filter-name
+                              :style {:color "gray"
+                                      :fontSize "0.6em"}} "obj" (str filter-name)]
     :else [:li {:key filter-name
                 :style {:color "gray"
                         :fontSize "0.6em"}} (str filter-data) (str filter-name)]))

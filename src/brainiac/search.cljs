@@ -36,11 +36,31 @@
     :else nil))
 
 (defn get-match-cond [[n f]]
-  (match f
-    {:type :string :value v} {n v}
+  (match [n f]
+    [_ {:type :string :value v}] {n v}
+    [:categories {:type :obj :value {:id v} :obj-field obj-field}] {"categories.id" v}
+    [:categories _] nil
+    [_ {:type :obj :value v :obj-field obj-field}] {(str (name n) "." (name obj-field)) v}
     :else nil))
 
 (def req-chan (chan (sliding-buffer 1)))
+(def cats-chan (chan (sliding-buffer 1)))
+
+(defn extract-categories-suggestions [resp]
+  (-> resp
+      :aggregations
+      :categories
+      :buckets
+      ((fn [v]
+        (for [{id :key top :top} v] {:id id
+                                      :name (->> top
+                                                :hits
+                                                :hits
+                                                first
+                                                :_source
+                                                :categories
+                                                (some #(and (= id (:id %)) %))
+                                                :name)})))))
 
 (go
   (while true
@@ -53,17 +73,46 @@
                           1 (first applied-filtered)
                           {:bool
                             {:must applied-filtered}})
-          match-cond (into {} applied-match)]
+          match-cond (into {} applied-match)
+          params {:aggs {:categories
+                          {:terms {:field "categories.id"}
+                            :aggs {:top {:top_hits {:size 1
+                                                    :_source {:include :categories}}}}}}
+                  :query
+                    {:filtered
+                      (into {} [{:filter filter-cond}
+                                (if (empty? match-cond)
+                                  {}
+                                  {:query {:match match-cond}})])}}
+          raw (<! (POST (es-endpoint-search) {:params params}))
+          categories-suggestions (extract-categories-suggestions raw)
+          search-result (-> raw
+                            (assoc :categories-suggestions categories-suggestions)
+                            (dissoc :aggregations))]
+      (swap! app/app-state assoc :search-result search-result))))
 
-      (swap! app/app-state assoc :search-result
-          (<! (POST (es-endpoint-search)
-                        {:params
-                          {:query
-                            {:filtered
-                              (into {} [{:filter filter-cond}
-                                        (if (empty? match-cond)
-                                          {}
-                                          {:query {:match match-cond}})])}}}))))))
+(go
+  (while true
+    (let [msg (<! cats-chan)
+          state @app/app-state
+          value (-> state
+                    :applied
+                    :categories
+                    :value
+                    :name)
+          params {:aggs {:categories
+                          {:terms {:field "categories.id"
+                                    :size 100}
+                            :aggs {:top {:top_hits {:size 1
+                                                    :_source {:include :categories}}}}}}
+                  :query
+                    {:filtered
+                      {:query {:prefix {"categories.name" value}}}}}
+          raw (<! (POST (es-endpoint-search) {:params params}))
+          categories-suggestions (->> raw
+                                      extract-categories-suggestions
+                                      (sort-by #(= -1 (.indexOf (:name %) value))))]
+      (swap! app/app-state assoc-in [:search-result :categories-suggestions] categories-suggestions))))
 
 (defn setup-watcher []
   (get-mapping))
