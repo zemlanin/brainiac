@@ -22,13 +22,11 @@
     :suggesters {:categories {:agg-field "categories.id"
                               :query-field "categories.name"
                               :display-field :name
-                              :checked :id
-                              :multi-value true}
+                              :checked :id}
                   :currency {:agg-field "currency"
                               :query-field "currency"
-                              :display-field 'name
-                              :checked 'some?
-                              :multi-value false}}}
+                              :display-field nil
+                              :checked 'some?}}}
   ])
 
 (defn set-doc-type [v]

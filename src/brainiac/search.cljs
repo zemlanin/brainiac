@@ -65,7 +65,7 @@
                               :_source
                               field
                               (flatmap-values id)
-                              display-field)
+                              (#(if display-field (display-field %) %)))
                     :count doc_count}))))))
 
 (go
