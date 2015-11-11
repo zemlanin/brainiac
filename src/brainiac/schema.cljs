@@ -9,7 +9,7 @@
                   :hits {s/Keyword s/Any
                           :total s/Num
                           :hits [s/Any]}}
-  :display-pretty s/Bool
+  :display-source s/Bool
   :mappings {s/Keyword s/Any}
   :cloud {:instance-mapper s/Str}
   :endpoint {:selected {:index (s/conditional

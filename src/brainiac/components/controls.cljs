@@ -19,7 +19,16 @@
     :index "uaprom2_brainiac"
     :doc-type "product"
     :instance-mapper "http://example.com:5000/brainiac/products_mapper"
-    :suggesters {:category_ids "https://httpbin.org/get?name={}&id=2829"}}
+    :suggesters {:categories {:agg-field "categories.id"
+                              :query-field "categories.name"
+                              :display-field :name
+                              :checked :id
+                              :multi-value true}
+                  :currency {:agg-field "currency"
+                              :query-field "currency"
+                              :display-field 'name
+                              :checked 'some?
+                              :multi-value false}}}
   ])
 
 (defn set-doc-type [v]
@@ -57,8 +66,8 @@
   (swap! app/app-state assoc-in settings-state new-value)
   (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
 
-(defn cloud-import [{instance-mapper :instance-mapper :as v}]
-  (swap! app/app-state assoc-in [:cloud :instance-mapper] instance-mapper)
+(defn cloud-import [v]
+  (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
   (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
   )
@@ -156,7 +165,7 @@
     (if (zero? (count modals)) (swap! app/app-state assoc :modals [#'settings-modal]))))
 
 (defn toggle-source [e]
-  (swap! app/app-state assoc :display-pretty (-> @app/app-state :display-pretty not)))
+  (swap! app/app-state assoc :display-source (-> @app/app-state :display-source not)))
 
 (rum/defc controls-component < rum/reactive []
   (let [state (rum/react app/app-state)]

@@ -37,30 +37,36 @@
 
 (defn get-match-cond [[n f]]
   (match [n f]
-    [_ {:type :string :value v}] {n v}
-    [:categories {:type :obj :value {:id v} :obj-field obj-field}] {"categories.id" v}
+    [_ {:type :string :value v}] {:query {:match {n v}}}
+    [:categories {:type :obj :value {:id v} :obj-field obj-field}] {:query {:match {"categories.id" v}}}
     [:categories _] nil
-    [_ {:type :obj :value v :obj-field obj-field}] {(str (name n) "." (name obj-field)) v}
+    [_ {:type :obj :value v :obj-field obj-field}] {:query {:match {(str (name n)) (:name v)}}}
     :else nil))
 
 (def req-chan (chan (sliding-buffer 1)))
 (def cats-chan (chan (sliding-buffer 1)))
 
-(defn extract-categories-suggestions [resp]
-  (-> resp
-      :aggregations
-      :categories
-      :buckets
-      ((fn [v]
-        (for [{id :key top :top} v] {:id id
-                                      :name (->> top
-                                                :hits
-                                                :hits
-                                                first
-                                                :_source
-                                                :categories
-                                                (some #(and (= id (:id %)) %))
-                                                :name)})))))
+(defn extract-categories-suggestions [resp field]
+  (let [state @app/app-state
+        field-settings (-> state :cloud :suggesters field)
+        display-field (:display-field field-settings)
+        flatmap-values (if (= :categories field) (fn [id v] (some #(and (= id (:id %)) %) v)) identity)]
+    (-> resp
+        :aggregations
+        field
+        :buckets
+        ((fn [v]
+          (for [{id :key top :top doc_count :doc_count}
+                v] {:id id
+                    :name (->> top
+                              :hits
+                              :hits
+                              first
+                              :_source
+                              field
+                              (flatmap-values id)
+                              display-field)
+                    :count doc_count}))))))
 
 (go
   (while true
@@ -68,51 +74,48 @@
           applied (filter #(not (nil? (second %))) (:applied @app/app-state))
           applied-filtered (filter some? (map get-filter-cond applied))
           applied-match (filter some? (map get-match-cond applied))
-          filter-cond (case (count applied-filtered)
-                          0 {}
-                          1 (first applied-filtered)
-                          {:bool
-                            {:must applied-filtered}})
-          match-cond (into {} applied-match)
-          params {:aggs {:categories
-                          {:terms {:field "categories.id"}
-                            :aggs {:top {:top_hits {:size 1
-                                                    :_source {:include :categories}}}}}}
-                  :query
-                    {:filtered
-                      (into {} [{:filter filter-cond}
-                                (if (empty? match-cond)
-                                  {}
-                                  {:query {:match match-cond}})])}}
+          state @app/app-state
+          suggesters (-> state :cloud :suggesters)
+          params {:aggs (into {} (for [[field settings] suggesters]
+                                    {field
+                                      {:terms {:field (:agg-field settings)}
+                                        :aggs {:top {:top_hits {:size 1
+                                                      :_source {:include field}}}}}}))
+                  :query {:filtered {:filter
+                                      {:bool
+                                        {:must
+                                          (concat applied-filtered applied-match)}}}}}
           raw (<! (POST (es-endpoint-search) {:params params}))
-          categories-suggestions (extract-categories-suggestions raw)
+          suggestions (into {} (for [[field] suggesters] {field (extract-categories-suggestions raw field)}))
           search-result (-> raw
-                            (assoc :categories-suggestions categories-suggestions)
+                            (assoc :suggestions suggestions)
                             (dissoc :aggregations))]
       (swap! app/app-state assoc :search-result search-result))))
 
 (go
   (while true
     (let [msg (<! cats-chan)
+          field (-> msg :field)
           state @app/app-state
+          field-settings (-> state :cloud :suggesters field)
           value (-> state
                     :applied
-                    :categories
+                    field
                     :value
                     :name)
-          params {:aggs {:categories
-                          {:terms {:field "categories.id"
+          params {:aggs {field
+                          {:terms {:field (:agg-field field-settings)
                                     :size 100}
                             :aggs {:top {:top_hits {:size 1
-                                                    :_source {:include :categories}}}}}}
+                                                    :_source {:include field}}}}}}
                   :query
                     {:filtered
-                      {:query {:prefix {"categories.name" value}}}}}
+                      {:query {:prefix {(:query-field field-settings) value}}}}}
           raw (<! (POST (es-endpoint-search) {:params params}))
-          categories-suggestions (->> raw
-                                      extract-categories-suggestions
-                                      (sort-by #(= -1 (.indexOf (:name %) value))))]
-      (swap! app/app-state assoc-in [:search-result :categories-suggestions] categories-suggestions))))
+          field-suggestions (->> raw
+                                  (#(extract-categories-suggestions % field))
+                                  (sort-by #(= -1 (.indexOf ((:display-field field-settings) %) value))))]
+      (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions))))
 
 (defn setup-watcher []
   (get-mapping))

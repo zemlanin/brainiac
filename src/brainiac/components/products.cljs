@@ -65,9 +65,9 @@
         display-fn ;(case (-> state :display-fn)
                     ;  :source es-source-component
                     ;  es-source-component)
-                    (if (and (-> state :display-pretty) (-> state :cloud :instance-mapper))
-                      pretty-component
-                      es-source-component)]
+                    (if (and (-> state :display-source) (-> state :cloud :instance-mapper))
+                      es-source-component
+                      pretty-component)]
     [:div {:className "pure-g"}
       [:h3 {:className "pure-u-1"} (if total (str "documents / " total) "documents")]
       [:div (map display-fn instances)]]))
