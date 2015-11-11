@@ -8,6 +8,11 @@ a {
   cursor: pointer;
 }
 
+a:not([href]):not(.fa) {
+  cursor: pointer;
+  border-bottom: 1px dashed;
+}
+
 .fa {
   font-family: 'FontAwesome';
 }
