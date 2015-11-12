@@ -1,5 +1,6 @@
 (ns ^:figwheel-always brainiac.search
-    (:require-macros [cljs.core.async.macros :refer [go]])
+    (:require-macros [cljs.core.async.macros :refer [go]]
+                      [brainiac.macros :refer [<?]])
     (:require [brainiac.utils :as u]
               [brainiac.appstate :as app]
               [brainiac.ajax :refer [GET POST]]
@@ -85,7 +86,10 @@
                                       {:bool
                                         {:must
                                           (concat applied-filtered applied-match)}}}}}
-          raw (<! (POST (es-endpoint-search) {:params params}))
+          raw (try
+                (<? (POST (es-endpoint-search) {:params params}))
+                (catch js/Error e
+                  nil))
           suggestions (into {} (for [[field] suggesters] {field (extract-categories-suggestions raw field)}))
           search-result (-> raw
                             (assoc :suggestions suggestions)
