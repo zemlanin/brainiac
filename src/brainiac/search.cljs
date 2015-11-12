@@ -50,8 +50,7 @@
 (defn extract-categories-suggestions [resp field]
   (let [state @app/app-state
         field-settings (-> state :cloud :suggesters field)
-        display-field (:display-field field-settings)
-        flatmap-values (if (= :categories field) (fn [id v] (some #(and (= id (:id %)) %) v)) identity)]
+        display-field (:display-field field-settings)]
     (-> resp
         :aggregations
         field
@@ -59,14 +58,16 @@
         ((fn [v]
           (for [{id :key top :top doc_count :doc_count}
                 v] {:id id
-                    :name (->> top
-                              :hits
-                              :hits
-                              first
-                              :_source
-                              field
-                              (flatmap-values id)
-                              (#(if display-field (display-field %) %)))
+                    :name (if (= :categories field)
+                            (->> top
+                                :hits
+                                :hits
+                                first
+                                :_source
+                                field
+                                (some #(and (= id (:id %)) %))
+                                display-field)
+                            id)
                     :count doc_count}))))))
 
 (go
@@ -79,9 +80,11 @@
           suggesters (-> state :cloud :suggesters)
           params {:aggs (into {} (for [[field settings] suggesters]
                                     {field
-                                      {:terms {:field (:agg-field settings)}
-                                        :aggs {:top {:top_hits {:size 1
-                                                      :_source {:include field}}}}}}))
+                                      (if (:display-field settings)
+                                          {:terms {:field (:agg-field settings)}
+                                            :aggs {:top {:top_hits {:size 1
+                                                    :_source {:include field}}}}}
+                                          {:terms {:field (:agg-field settings)}})}))
                   :query {:filtered {:filter
                                       {:bool
                                         {:must
