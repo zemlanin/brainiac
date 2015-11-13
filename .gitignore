@@ -1,4 +1,5 @@
 /resources/public/js/compiled/**
+/resources/public/edn/config.edn
 figwheel_server.log
 pom.xml
 *jar

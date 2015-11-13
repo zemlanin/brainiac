@@ -1,0 +1,13 @@
+{:endpoint-shortcuts [{:name "localhost"
+                        :host "localhost:9200"
+                        :index "brainiac"
+                        :doc-type "product"
+                        :instance-mapper "http://example.com/brainiac/products_mapper"
+                        :suggesters {:categories {:agg-field "categories.id"
+                                                  :query-field "categories.name"
+                                                  :display-field :name
+                                                  :checked :id}
+                                      :currency {:agg-field "currency"
+                                                  :query-field "currency"
+                                                  :display-field nil
+                                                  :checked nil}}}]}

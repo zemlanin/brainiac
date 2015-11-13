@@ -14,19 +14,19 @@
 (defn GET
   ([url] (GET url {}))
   ([url m] (let [ch (chan 1)]
-              (ajax/GET url (merge m {:handler (chan-hand ch)
-                                      :error-handler (chan-hand-error ch)
-                                      :response-format :json
-                                      :format :json
-                                      :keywords? true}))
+              (ajax/GET url (merge {:handler (chan-hand ch)
+                                    :error-handler (chan-hand-error ch)
+                                    :response-format :json
+                                    :format :json
+                                    :keywords? true} m))
               ch)))
 
 (defn POST
   ([url] (POST url {}))
   ([url m] (let [ch (chan 1)]
-              (ajax/POST url (merge m {:handler (chan-hand ch)
-                                        :error-handler (chan-hand-error ch)
-                                        :response-format :json
-                                        :format :json
-                                        :keywords? true}))
+              (ajax/POST url (merge {:handler (chan-hand ch)
+                                      :error-handler (chan-hand-error ch)
+                                      :response-format :json
+                                      :format :json
+                                      :keywords? true} m))
               ch)))

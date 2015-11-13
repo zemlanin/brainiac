@@ -26,7 +26,7 @@
                   :currency {:agg-field "currency"
                               :query-field "currency"
                               :display-field nil
-                              :checked 'some?}}}
+                              :checked nil}}}
   ])
 
 (defn set-doc-type [v]
@@ -80,7 +80,7 @@
   (let [new-value (-> e .-target .-value)]
     (swap! app/app-state assoc-in field-state new-value)))
 
-(defn settings-modal  []
+(defn settings-modal []
   (let [state @app/app-state]
     [:div
       [:form {:className "pure-form pure-form-stacked"
@@ -147,7 +147,7 @@
 
         [:div {:className "pure-g"}
             [:div {:className "pure-u-1"}
-              [:ul nil (for [sh endpoint-shortcuts]
+              [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
                 [:li
                   [:a {:onClick #(cloud-import sh)} (:name sh)]])]
               ]]
@@ -160,7 +160,10 @@
 
 (defn display-settings []
   (let [modals (:modals @app/app-state)]
-    (if (zero? (count modals)) (swap! app/app-state assoc :modals [#'settings-modal]))))
+    (when (zero? (count modals))
+      (go (->> (<! (GET "/edn/config.edn" {:response-format :edn}))
+              (swap! app/app-state assoc :cs-config)))
+      (swap! app/app-state assoc :modals [#'settings-modal]))))
 
 (defn toggle-source [e]
   (swap! app/app-state assoc :display-source (-> @app/app-state :display-source not)))

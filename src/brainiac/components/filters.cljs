@@ -151,7 +151,8 @@
 (defn suggester-filter [n {v :value}]
   (let [state @app/app-state
         suggestions (-> state :search-result :suggestions n)
-        field-settings (-> state :cloud :suggesters n)]
+        field-settings (-> state :cloud :suggesters n)
+        checked (or (:checked field-settings) identity)]
 
     [:fieldset
       [:legend
@@ -161,7 +162,7 @@
           [:input {:type :checkbox
                     :style {:display :none}
                     :value ""
-                    :checked (-> v (:checked field-settings))
+                    :checked (-> v checked)
                     :onChange #(when-not (-> % .-target .-checked) (suggester-onchange n %))}]]]
 
       [:input {:style {:width "80%"}
