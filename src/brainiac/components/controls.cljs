@@ -13,22 +13,6 @@
 
 (def ENTER 13)
 
-(def endpoint-shortcuts [
-  {:name "localhost"
-    :host "localhost:9200"
-    :index "uaprom2_brainiac"
-    :doc-type "product"
-    :instance-mapper "http://example.com:5000/brainiac/products_mapper"
-    :suggesters {:categories {:agg-field "categories.id"
-                              :query-field "categories.name"
-                              :display-field :name
-                              :checked :id}
-                  :currency {:agg-field "currency"
-                              :query-field "currency"
-                              :display-field nil
-                              :checked nil}}}
-  ])
-
 (defn set-doc-type [v]
   (swap! app/app-state assoc-in [:endpoint :selected :doc-type] v)
   (search/get-mapping))
