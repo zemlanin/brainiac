@@ -1,6 +1,6 @@
 (ns ^:figwheel-always brainiac.components.controls
     (:require-macros [cljs.core.async.macros :refer [go]]
-                      [brainiac.macros :refer [<?]])
+                     [brainiac.macros :refer [<?]])
     (:require [rum.core :as rum]
               [schema.core :as s :include-macros true]
               [brainiac.utils :as u]
@@ -35,7 +35,7 @@
         endpoint (str "http://" (-> state :endpoint :selected :host) "/_mapping")]
       (go
         (let [indices (->> (<! (GET endpoint))
-                          (filter #(not (key-starts-with-dot %)))
+                          (filter (complement key-starts-with-dot))
                           (filter value-has-mappings))
               stripped-indices (->> indices
                                     (map #(vector (first %) (-> % second :mappings keys)))
@@ -51,8 +51,8 @@
 (defn cloud-import [v]
   (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
-  (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
-  )
+  (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type])))
+
 
 (defn check-and-save-field-input [e field-state settings-state]
   (let [new-value (-> e .-target .-value)]
@@ -127,20 +127,20 @@
                         :onChange change-doc-type}
                   [:option]
                   (for [doc-type doc-types]
-                    [:option doc-type])]])
+                    [:option {:value doc-type} (name doc-type)])]])
 
-        [:div {:className "pure-g"}
-            [:div {:className "pure-u-1"}
-              [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
-                [:li
-                  [:a {:onClick #(cloud-import sh)} (:name sh)]])]
-              ]]
+         [:div {:className "pure-g"}
+             [:div {:className "pure-u-1"}
+               [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
+                         [:li
+                           [:a {:onClick #(cloud-import sh)} (:name sh)]])]]]
 
-          [:div {:className "pure-u-1"}
-            [:label {:className "pure-u-1"} "state"
-              [:textarea {:rows 6
-                          :className "pure-u-1"
-                          :value (str state)}]]]]]]))
+
+         [:div {:className "pure-u-1"}
+           [:label {:className "pure-u-1"} "state"
+             [:textarea {:rows 6
+                         :className "pure-u-1"
+                         :value (str state)}]]]]]]))
 
 (defn display-settings []
   (let [modals (:modals @app/app-state)]

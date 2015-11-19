@@ -17,7 +17,7 @@
                                   #(contains? (-> @app/app-state :endpoint :indices) (keyword %)) s/Str)
                           :doc-type s/Str
                           ; TODO: check for running ES instance
-                          :host (s/conditional #(.endsWith % ":9200") s/Str)}
+                          :host (s/conditional #(or (.endsWith % ":9200") (.endsWith % ":9202")) s/Str)}
               :indices {s/Keyword [s/Keyword]}}
   :modals [s/Any]
   :instances [{s/Keyword s/Any}]

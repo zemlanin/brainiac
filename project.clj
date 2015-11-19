@@ -7,7 +7,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [sablono "0.3.6"]
+                 [sablono "0.4.0"]
                  [cljs-ajax "0.3.11"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [prismatic/schema "1.0.2"]
