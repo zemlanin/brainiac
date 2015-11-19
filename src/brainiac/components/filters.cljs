@@ -46,7 +46,7 @@
       (if (some? new-value)
         (swap! app/app-state assoc-in [:applied n] new-value)
         (swap! app/app-state assoc :applied (dissoc applied n)))
-        (go (>! search/req-chan {}))))
+      (go (>! search/req-chan {}))))
 
 (defn string-onchange [n e]
   (.preventDefault e)
@@ -108,7 +108,7 @@
                             :checked (= v bool-val)
                             :onChange #(boolean-onchange n %)
                             :value str-val}
-                  str-val]]]))]])
+                   str-val]]]))]])
 
 (defn integer-filter [n {{v-min :min v-max :max :as v} :value}]
   [:fieldset
@@ -195,5 +195,4 @@
         filters (when doc-type (-> state :mappings doc-type :properties))]
     [:div
       [:ul (for [[n filter-data] (into [] filters)]
-              (match-filter-type n filter-data (get applied n)))]
-  ]))
+              (match-filter-type n filter-data (get applied n)))]]))

@@ -21,30 +21,30 @@
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
   :cljsbuild {
-    :builds [{:id "dev"
-              :source-paths ["src"]
+              :builds [{:id "dev"
+                        :source-paths ["src"]
 
-              :figwheel { :on-jsload "brainiac.core/on-js-reload" }
+                        :figwheel { :on-jsload "brainiac.core/on-js-reload"}
 
-              :compiler {:main brainiac.core
-                         :asset-path "js/compiled/out"
-                         :output-to "resources/public/js/compiled/brainiac.js"
-                         :output-dir "resources/public/js/compiled/out"
-                         :source-map-timestamp true }}
-             {:id "min"
-              :source-paths ["src"]
-              :compiler {:output-to "resources/public/js/compiled/brainiac.js"
-                         :main brainiac.core
-                         :optimizations :advanced
-                         :pretty-print false}}]}
+                        :compiler {:main brainiac.core
+                                   :asset-path "js/compiled/out"
+                                   :output-to "resources/public/js/compiled/brainiac.js"
+                                   :output-dir "resources/public/js/compiled/out"
+                                   :source-map-timestamp true}}
+                       {:id "min"
+                        :source-paths ["src"]
+                        :compiler {:output-to "resources/public/js/compiled/brainiac.js"
+                                   :output-dir "resources/public/js/compiled"
+                                   :main brainiac.core
+                                   :optimizations :advanced
+                                   :source-map "resources/public/js/compiled/brainiac.js.map"
+                                   :pretty-print false}}]}
 
   :figwheel {
-             ;; :http-server-root "public" ;; default and assumes "resources" 
+             ;; :http-server-root "public" ;; default and assumes "resources"
              ;; :server-port 3449 ;; default
              :server-port 8000
-             ;; :server-ip "127.0.0.1" 
-
-             :css-dirs ["resources/public/css"] ;; watch and update CSS
+             ;; :server-ip "127.0.0.1"
 
              ;; Start an nREPL server into the running figwheel process
              ;; :nrepl-port 7888
@@ -68,5 +68,6 @@
              ;; :repl false
 
              ;; to configure a different figwheel logfile path
-             ;; :server-logfile "tmp/logs/figwheel-logfile.log" 
-             })
+             ;; :server-logfile "tmp/logs/figwheel-logfile.log"
+
+             :css-dirs ["resources/public/css"]}) ;; watch and update CSS

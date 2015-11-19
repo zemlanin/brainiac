@@ -25,7 +25,9 @@
       (set-doc-type new-doc-type)))
 
 (defn key-starts-with-dot [[k v]]
-  (.startsWith (name k) "."))
+  (-> k
+      clj->js
+      (#(re-matches #"^\." %))))
 
 (defn value-has-mappings [[k v]]
   (not (empty? (-> v :mappings))))
