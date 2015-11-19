@@ -1,6 +1,6 @@
 (ns ^:figwheel-always brainiac.search
     (:require-macros [cljs.core.async.macros :refer [go]]
-                      [brainiac.macros :refer [<?]])
+                     [brainiac.macros :refer [<?]])
     (:require [brainiac.utils :as u]
               [brainiac.appstate :as app]
               [brainiac.ajax :refer [GET POST]]
@@ -72,57 +72,61 @@
 
 (go
   (while true
-    (let [msg (<! req-chan)
-          applied (filter #(not (nil? (second %))) (:applied @app/app-state))
-          applied-filtered (filter some? (map get-filter-cond applied))
-          applied-match (filter some? (map get-match-cond applied))
-          state @app/app-state
-          suggesters (-> state :cloud :suggesters)
-          params {:aggs (into {} (for [[field settings] suggesters]
-                                    {field
-                                      (if (:display-field settings)
-                                          {:terms {:field (:agg-field settings)}
-                                            :aggs {:top {:top_hits {:size 1
-                                                    :_source {:include field}}}}}
-                                          {:terms {:field (:agg-field settings)}})}))
-                  :query {:filtered {:filter
-                                      {:bool
-                                        {:must
-                                          (concat applied-filtered applied-match)}}}}}
-          raw (try
-                (<? (POST (es-endpoint-search) {:params params}))
-                (catch js/Error e
-                  nil))
-          suggestions (into {} (for [[field] suggesters] {field (extract-categories-suggestions raw field)}))
-          search-result (-> raw
-                            (assoc :suggestions suggestions)
-                            (dissoc :aggregations))]
-      (swap! app/app-state assoc :search-result search-result))))
+    (when-let [msg (<! req-chan)]
+      (swap! app/app-state assoc :loading true)
+      (let [applied (filter #(not (nil? (second %))) (:applied @app/app-state))
+            applied-filtered (filter some? (map get-filter-cond applied))
+            applied-match (filter some? (map get-match-cond applied))
+            state @app/app-state
+            suggesters (-> state :cloud :suggesters)
+            params {:aggs (into {} (for [[field settings] suggesters]
+                                      {field
+                                        (if (:display-field settings)
+                                            {:terms {:field (:agg-field settings)}
+                                              :aggs {:top {:top_hits {:size 1
+                                                                      :_source {:include field}}}}}
+                                            {:terms {:field (:agg-field settings)}})}))
+                    :query {:filtered {:filter
+                                        {:bool
+                                          {:must
+                                            (concat applied-filtered applied-match)}}}}}
+            raw (try
+                  (<? (POST (es-endpoint-search) {:params params}))
+                  (catch js/Error e
+                    nil))
+            suggestions (into {} (for [[field] suggesters] {field (extract-categories-suggestions raw field)}))
+            search-result (-> raw
+                              (assoc :suggestions suggestions)
+                              (dissoc :aggregations))]
+        (swap! app/app-state dissoc :loading)
+        (swap! app/app-state assoc :search-result search-result)))))
 
 (go
   (while true
-    (let [msg (<! cats-chan)
-          field (-> msg :field)
-          state @app/app-state
-          field-settings (-> state :cloud :suggesters field)
-          value (-> state
-                    :applied
-                    field
-                    :value
-                    :name)
-          params {:aggs {field
-                          {:terms {:field (:agg-field field-settings)
-                                    :size 100}
-                            :aggs {:top {:top_hits {:size 1
-                                                    :_source {:include field}}}}}}
-                  :query
-                    {:filtered
-                      {:query {:prefix {(:query-field field-settings) value}}}}}
-          raw (<! (POST (es-endpoint-search) {:params params}))
-          field-suggestions (->> raw
-                                  (#(extract-categories-suggestions % field))
-                                  (sort-by #(= -1 (.indexOf ((:display-field field-settings) %) value))))]
-      (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions))))
+    (when-let [msg (<! cats-chan)]
+      (swap! app/app-state assoc :loading true)
+      (let [field (-> msg :field)
+            state @app/app-state
+            field-settings (-> state :cloud :suggesters field)
+            value (-> state
+                      :applied
+                      field
+                      :value
+                      :name)
+            params {:aggs {field
+                            {:terms {:field (:agg-field field-settings)
+                                      :size 100}
+                              :aggs {:top {:top_hits {:size 1
+                                                      :_source {:include field}}}}}}
+                    :query
+                      {:filtered
+                        {:query {:prefix {(:query-field field-settings) value}}}}}
+            raw (<! (POST (es-endpoint-search) {:params params}))
+            field-suggestions (->> raw
+                                    (#(extract-categories-suggestions % field))
+                                    (sort-by #(= -1 (.indexOf ((:display-field field-settings) %) value))))]
+        (swap! app/app-state dissoc :loading)
+        (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions)))))
 
 (defn setup-watcher []
   (get-mapping))

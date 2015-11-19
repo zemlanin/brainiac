@@ -32,13 +32,13 @@
                       :style {:maxHeight 200 :maxWidth "100%"}}])
           (when (< 1 (count images))
             [:ul {:className "thumbs-list"} (for [i images]
-              [:li [:img {:src i}]])])]
+                                             [:li [:img {:src i}]])])]
         [:div {:className "pure-u-1-24"}]
         [:div {:className "pure-u-15-24"
                 :style {
-                  :maxHeight 200
-                  :overflow :auto
-                  :WebkitTransform "translateZ(0)"}}
+                        :maxHeight 200
+                        :overflow :auto
+                        :WebkitTransform "translateZ(0)"}}
           (:description data)]]]])
 
 (defn es-source-component [{{id :_id} :es :as data}]
@@ -82,15 +82,18 @@
         (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
                   (for [r (-> cloud-response :instances)]
                     (assoc r :es (get hits-map (:id r))))))
-        (>! ch (map #(assoc {} :es %) hits)))
-        )
+        (>! ch (map #(assoc {} :es %) hits))))
+
     ch))
 
 (defn instance-mapper-watcher [_ _ prev cur]
   (when-not (u/=in prev cur :search-result :hits)
     (go
-      (swap! app/app-state assoc :instances
-        (<! (instance-mapper cur))))))
+      (swap! app/app-state assoc :loading true)
+      (let [instances (<! (instance-mapper cur))]
+        (swap! app/app-state assoc :instances instances)
+        (swap! app/app-state dissoc :loading)))))
+
 
 (defn setup-watcher []
   (remove-watch app/app-state :products-watcher)

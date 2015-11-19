@@ -155,6 +155,8 @@
 (rum/defc controls-component < rum/reactive []
   (let [state (rum/react app/app-state)]
     [:div
+      [:a {:className (str "action fa fa-refresh" (when (:loading state) " rotating"))
+            :onClick (when-not (:loading state) #(go (>! search/req-chan {})))}]
       [:a {:className "action fa fa-newspaper-o"
             :style (when-not (-> state :cloud :instance-mapper) {:color :gray
                                                                   :cursor :auto})

@@ -25,6 +25,20 @@ a:not([href]):not(.fa) {
   color: red;
 }
 
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  color: royalblue;
+  animation: rotating 2s linear infinite;
+}
+
 #modals .wrapper {
   position: absolute;
   top: 0;
