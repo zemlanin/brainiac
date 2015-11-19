@@ -53,7 +53,8 @@
 (defn cloud-import [v]
   (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
-  (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type])))
+  (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
+  (go (>! search/req-chan {})))
 
 
 (defn check-and-save-field-input [e field-state settings-state]
