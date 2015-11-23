@@ -4,7 +4,7 @@
               [brainiac.utils :as u]
               [brainiac.ajax :refer [GET]]
               [clojure.string :as str]
-              [cljs.core.async :refer [>! chan close!]]
+              [cljs.core.async :refer [>! chan close! to-chan]]
               [cljs.pprint :refer [pprint]]
               [brainiac.appstate :as app]))
 
@@ -73,18 +73,20 @@
       [:div (map display-fn instances)]]))
 
 (defn instance-mapper [state]
-  (let [ch (chan 1)
-        hits (-> state :search-result :hits :hits)
-        hits-map (into {} (for [h hits] [(-> h :_id js/parseInt) h]))
-        ids (keys hits-map)]
-    (go
-      (if-let [url (-> state :cloud :instance-mapper)]
-        (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
-                  (for [r (-> cloud-response :instances)]
-                    (assoc r :es (get hits-map (:id r))))))
-        (>! ch (map #(assoc {} :es %) hits))))
+  (let [hits (-> state :search-result :hits :hits)]
+    (if (= 0 (count hits))
+      (to-chan [[]])
+      (let [ch (chan 1)
+            hits-map (into {} (for [h hits] [(-> h :_id js/parseInt) h]))
+            ids (keys hits-map)]
+        (go
+          (if-let [url (-> state :cloud :instance-mapper)]
+            (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
+                      (for [r (-> cloud-response :instances)]
+                        (assoc r :es (get hits-map (:id r))))))
+            (>! ch (map #(assoc {} :es %) hits))))
 
-    ch))
+        ch))))
 
 (defn instance-mapper-watcher [_ _ prev cur]
   (when-not (u/=in prev cur :search-result :hits)
