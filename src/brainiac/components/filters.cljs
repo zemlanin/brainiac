@@ -148,11 +148,14 @@
               :value v
               :onChange #(string-onchange n %)}]])
 
-(defn suggester-filter [n {v :value}]
+(defn suggester-filter [n {v :value props :properties}]
   (let [state @app/app-state
         suggestions (-> state :search-result :suggestions n)
         field-settings (-> state :cloud :suggesters n)
-        checked (or (:checked field-settings) identity)]
+        checked (cond
+                  (:checked field-settings) (:checked field-settings)
+                  (:id props) :id
+                  :else identity)]
 
     [:fieldset
       [:legend
@@ -181,6 +184,7 @@
     [_ {:type "long"}] [:li {:key filter-name} (integer-filter filter-name value)]
     [_ {:type "string"}] [:li {:key filter-name} (string-filter filter-name value)]
     [_ {:index "no"}] nil
+    [_ {:properties {:id _ :name _}}] [:li {:key filter-name} (suggester-filter filter-name value)]
     [_ {:properties _}] [:li {:key filter-name
                               :style {:color "gray"
                                       :fontSize "0.6em"}} "obj" (str filter-name)]

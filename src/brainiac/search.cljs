@@ -36,13 +36,28 @@
     {:type :integer :value {:max b}} {:range {n {:lte b}}}
     :else nil))
 
+
+(defn get-mapping-data [field]
+  (-> @app/app-state :mappings :product :properties field :properties))
+
 (defn get-match-cond [[n f]]
-  (match [n f]
-    [_ {:type :string :value v}] {:query {:match {n v}}}
-    [:categories {:type :obj :value {:id v} :obj-field obj-field}] {:query {:match {"categories.id" v}}}
-    [:categories _] nil
-    [_ {:type :obj :value v :obj-field obj-field}] {:query {:match {(str (name n)) (:name v)}}}
-    :else nil))
+  (let [agg-field (cond
+                    (-> n get-mapping-data :id) (str (name n) ".id")
+                    :else nil)]
+    (match [agg-field f]
+      [_ {:type :string :value v}] {:query {:match {n v}}}
+      [nil {:type :obj :value v :obj-field obj-field}] {:query {:match {(name n) (:name v)}}}
+      [(_ :guard some?) {:type :obj :value {:id v} :obj-field obj-field}] {:query {:match {agg-field v}}}
+      :else nil)))
+
+(defn get-obj-fields []
+  (->> @app/app-state
+      :mappings
+      :product
+      :properties
+      (filter #(-> % second :properties :id))
+      keys))
+
 
 (def req-chan (chan (sliding-buffer 1)))
 (def cats-chan (chan (sliding-buffer 1)))
@@ -50,7 +65,10 @@
 (defn extract-categories-suggestions [resp field]
   (let [state @app/app-state
         field-settings (-> state :cloud :suggesters field)
-        display-field (:display-field field-settings)]
+        display-field (cond
+                        (:display-field field-settings) (:display-field field-settings)
+                        (-> field get-mapping-data :name) :name
+                        :else nil)]
     (-> resp
         :aggregations
         field
@@ -58,7 +76,7 @@
         ((fn [v]
           (for [{id :key top :top doc_count :doc_count}
                 v] {:id id
-                    :name (if (= :categories field)
+                    :name (if display-field
                             (->> top
                                 :hits
                                 :hits
@@ -78,14 +96,24 @@
             applied-filtered (filter some? (map get-filter-cond applied))
             applied-match (filter some? (map get-match-cond applied))
             state @app/app-state
-            suggesters (-> state :cloud :suggesters)
-            params {:aggs (into {} (for [[field settings] suggesters]
-                                      {field
-                                        (if (:display-field settings)
-                                            {:terms {:field (:agg-field settings)}
-                                              :aggs {:top {:top_hits {:size 1
-                                                                      :_source {:include field}}}}}
-                                            {:terms {:field (:agg-field settings)}})}))
+            suggesters (-> state :cloud :suggesters keys)
+            agg-fields (concat suggesters (get-obj-fields))
+            params {:aggs (into {} (for [field agg-fields]
+                                      (let [settings (-> state :cloud :suggesters field)
+                                            agg-field (cond
+                                                        (:agg-field settings) (:agg-field settings)
+                                                        (-> field get-mapping-data :id) (str (name field) ".id")
+                                                        :else (name field))
+                                            display-field (cond
+                                                            (:display-field settings) (:display-field settings)
+                                                            (-> field get-mapping-data :name) :name
+                                                            :else nil)]
+                                        {field
+                                          (if display-field
+                                              {:terms {:field agg-field}
+                                                :aggs {:top {:top_hits {:size 1
+                                                                        :_source {:include field}}}}}
+                                              {:terms {:field agg-field}})})))
                     :query {:filtered {:filter
                                         {:bool
                                           {:must
@@ -94,7 +122,7 @@
                   (<? (POST (es-endpoint-search) {:params params}))
                   (catch js/Error e
                     nil))
-            suggestions (into {} (for [[field] suggesters] {field (extract-categories-suggestions raw field)}))
+            suggestions (into {} (for [field agg-fields] {field (extract-categories-suggestions raw field)}))
             search-result (-> raw
                               (assoc :suggestions suggestions)
                               (dissoc :aggregations))]
@@ -108,23 +136,35 @@
       (let [field (-> msg :field)
             state @app/app-state
             field-settings (-> state :cloud :suggesters field)
+            query-field (cond
+                          (:query-field field-settings) (:query-field field-settings)
+                          (-> field get-mapping-data :name) (str (name field) ".name")
+                          :else (name field))
+            agg-field (cond
+                        (:agg-field field-settings) (:agg-field field-settings)
+                        (-> field get-mapping-data :id) (str (name field) ".id")
+                        :else (name field))
+            display-field (cond
+                            (:display-field field-settings) (:display-field field-settings)
+                            (-> field get-mapping-data :name) :name
+                            :else identity)
             value (-> state
                       :applied
                       field
                       :value
                       :name)
             params {:aggs {field
-                            {:terms {:field (:agg-field field-settings)
+                            {:terms {:field agg-field
                                       :size 100}
                               :aggs {:top {:top_hits {:size 1
                                                       :_source {:include field}}}}}}
                     :query
                       {:filtered
-                        {:query {:prefix {(:query-field field-settings) value}}}}}
+                        {:query {:prefix {query-field value}}}}}
             raw (<! (POST (es-endpoint-search) {:params params}))
             field-suggestions (->> raw
                                     (#(extract-categories-suggestions % field))
-                                    (sort-by #(= -1 (.indexOf ((:display-field field-settings) %) value))))]
+                                    (sort-by #(= -1 (.indexOf (display-field %) value))))]
         (swap! app/app-state dissoc :loading)
         (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions)))))
 

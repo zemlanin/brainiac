@@ -18,16 +18,17 @@
 (rum/defc appliedFilters-component < rum/reactive []
   (when-let [applied (:applied (rum/react app/app-state))]
     [:div
-      [:ul (for [[k {v :value t :type}] applied]
-              (if (and (= k :categories) (not (contains? v :id)))
+      [:ul (for [[k {v :value t :type obj-field :obj-field}] applied]
+              (if (and obj-field (-> v obj-field not))
                 nil
                 [:li {:key (name k)}
-                      (when (= :boolean t)
-                        [:a {:className (if v "fa fa-toggle-on" "fa fa-toggle-off")
+                     (when (= :boolean t)
+                       [:a {:className (if v "fa fa-toggle-on" "fa fa-toggle-off")
                             :style {:marginRight "0.5em"}
                             :onClick #(toggle-value k v)}])
-                      (name k)
-                      (when (= k :categories) [:span ": " (:name v)])
-                      [:a {:className "fa fa-remove"
-                            :style {:marginLeft "0.5em"}
-                            :onClick #(remove-value k)}]]))]]))
+                     (if (:name v)
+                        [:span (name k) ": " (:name v)]
+                        [:span (name k)])
+                     [:a {:className "fa fa-remove"
+                           :style {:marginLeft "0.5em"}
+                           :onClick #(remove-value k)}]]))]]))
