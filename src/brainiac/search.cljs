@@ -31,9 +31,9 @@
 (defn get-filter-cond [[n f]]
   (match f
     {:type :boolean :value v} {:term {n v}}
-    {:type :integer :value {:min a :max b}} {:range {n {:gte a :lte b}}}
-    {:type :integer :value {:min a}} {:range {n {:gte a}}}
-    {:type :integer :value {:max b}} {:range {n {:lte b}}}
+    {:type :number :value {:min a :max b}} {:range {n {:gte a :lte b}}}
+    {:type :number :value {:min a}} {:range {n {:gte a}}}
+    {:type :number :value {:max b}} {:range {n {:lte b}}}
     :else nil))
 
 

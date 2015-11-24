@@ -39,10 +39,28 @@
           new-value (if (= t :all)
                       v
                       (match [v old-value]
-                        [(_ :guard #(-> % js/parseInt js/isNaN not)) nil] {:type :integer :value {t (js/parseInt v)}}
+                        [(_ :guard #(-> % js/parseInt js/isNaN not)) nil] {:type :number :value {t (js/parseInt v)}}
                         [(_ :guard #(-> % js/parseInt js/isNaN not)) _] (assoc-in old-value [:value t] (js/parseInt v))
                         ; TODO: save another value when another is removed
                         :else nil))]
+      (if (some? new-value)
+        (swap! app/app-state assoc-in [:applied n] new-value)
+        (swap! app/app-state assoc :applied (dissoc applied n)))
+      (go (>! search/req-chan {}))))
+
+(defn float-onchange [n t e]
+    (.preventDefault e)
+    (let [applied (:applied @app/app-state)
+          old-value (n applied)
+          v (-> e .-target .-value js-str->clj)
+          new-value (if (= t :all)
+                      v
+                      (match [v old-value]
+                        [(_ :guard #(-> % js/parseFloat js/isNaN not)) nil] {:type :number :value {t v}}
+                        [(_ :guard #(-> % js/parseFloat js/isNaN not)) _] (assoc-in old-value [:value t] v)
+                        ; TODO: save another value when another is removed
+                        :else nil))]
+      (println new-value)
       (if (some? new-value)
         (swap! app/app-state assoc-in [:applied n] new-value)
         (swap! app/app-state assoc :applied (dissoc applied n)))
@@ -132,6 +150,29 @@
               :value v-max
               :onChange #(integer-onchange n :max %)}]])
 
+(defn float-filter [n {{v-min :min v-max :max :as v} :value}]
+  [:fieldset
+    [:legend
+      [:label
+        (name n)
+        (when v [:a {:class "fa fa-remove"}])
+        [:input {:type :checkbox
+                  :style {:display :none}
+                  :value "null"
+                  :checked v
+                  :onChange #(when-not (-> % .-target .-checked) (float-onchange n :all %))}]]]
+
+    [:input {:type :number
+              :step :any
+              :style {:width "30%"}
+              :value v-min
+              :onChange #(float-onchange n :min %)}]
+    (if (and v-min v-max (> v-min v-max)) " ≥ x ≥ " " ≤ x ≤ ")
+    [:input {:type :number
+              :style {:width "30%"}
+              :value v-max
+              :onChange #(float-onchange n :max %)}]])
+
 (defn string-filter [n {v :value}]
   [:fieldset
     [:legend
@@ -183,6 +224,8 @@
     [_ {:type "integer"}] [:li {:key filter-name} (integer-filter filter-name value)]
     [_ {:type "long"}] [:li {:key filter-name} (integer-filter filter-name value)]
     [_ {:type "string"}] [:li {:key filter-name} (string-filter filter-name value)]
+    [_ {:type "float"}] [:li {:key filter-name} (float-filter filter-name value)]
+    [_ {:type "double"}] [:li {:key filter-name} (float-filter filter-name value)]
     [_ {:index "no"}] nil
     [_ {:properties {:id _ :name _}}] [:li {:key filter-name} (suggester-filter filter-name value)]
     [_ {:properties _}] [:li {:key filter-name
@@ -198,5 +241,8 @@
         doc-type (-> state :endpoint :selected :doc-type keyword)
         filters (when doc-type (-> state :mappings doc-type :properties))]
     [:div
-      [:ul (for [[n filter-data] (into [] filters)]
+      [:ul (for [[n filter-data] (->> filters
+                                    (into [])
+                                    (sort-by first)
+                                    (sort-by #(contains? applied (first %)) >))]
               (match-filter-type n filter-data (get applied n)))]]))
