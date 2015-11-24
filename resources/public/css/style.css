@@ -63,10 +63,11 @@ a:not([href]):not(.fa) {
 }
 
 #filters {
-  position: absolute;
+  -webkit-transform: translateZ(0);
+  position: fixed;
   top: 0;
   bottom: 3.3em;
-  width: 100%;
+  width: inherit;
   overflow-y: auto;
 }
 
