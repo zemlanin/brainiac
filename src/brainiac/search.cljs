@@ -118,7 +118,7 @@
                                         {:bool
                                           {:must
                                             (concat applied-filtered applied-match)}}}}
-                    :size (if (:only-aggs msg) 0 12)}
+                    :size (or (:size msg) 24)}
             raw (try
                   (<? (POST (es-endpoint-search) {:params params}))
                   (catch js/Error e

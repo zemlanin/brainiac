@@ -3,6 +3,7 @@
     (:require [rum.core :as rum]
               [brainiac.utils :as u]
               [brainiac.ajax :refer [GET]]
+              [brainiac.search :as search]
               [clojure.string :as str]
               [cljs.core.async :refer [>! chan close! to-chan]]
               [cljs.pprint :refer [pprint]]
@@ -61,7 +62,9 @@
   (let [state (rum/react app/app-state)
         search-result (-> state :search-result)
         instances (-> state :instances)
+        loading (-> state :loading)
         total (-> state :search-result :hits :total)
+        size (count instances)
         display-fn ;(case (-> state :display-fn)
                     ;  :source es-source-component
                     ;  es-source-component)
@@ -70,7 +73,21 @@
                       pretty-component)]
     [:div {:className "pure-g"}
       [:h3 {:className "pure-u-1"} (if total (str "documents / " total) "documents")]
-      [:div (map display-fn instances)]]))
+      [:div (map display-fn instances)]
+      (when
+        (and
+          size
+          (> size 0)
+          (> total size))
+        [:div {:className "pure-u-1"
+                :style {:textAlign :center
+                        :fontSize "3em"}}
+          (if loading
+            [:a
+              {:className "fa fa-refresh rotating"}]
+            [:a
+              {:onClick #(go (>! search/req-chan {:size (+ size 24)}))
+                :className "fa fa-ellipsis-v"}])])]))
 
 (defn instance-mapper [state]
   (let [hits (-> state :search-result :hits :hits)]
