@@ -54,6 +54,7 @@
   (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
   (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
+  (swap! app/app-state assoc :applied (:default-applied v))
   (go
     (>! search/req-chan {:size 0})
     (>! search/req-chan {})))

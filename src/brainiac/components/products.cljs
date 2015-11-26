@@ -79,15 +79,15 @@
           size
           (> size 0)
           (> total size))
-        [:div {:className "pure-u-1"
-                :style {:textAlign :center
-                        :fontSize "3em"}}
+        [:a {:className "pure-u-1 fa"
+              :onClick (when-not loading #(go (>! search/req-chan {:size (+ size 24)})))
+              :style {:textAlign :center
+                      :fontSize "3em"}}
           (if loading
-            [:a
+            [:span
               {:className "fa fa-refresh rotating"}]
-            [:a
-              {:onClick #(go (>! search/req-chan {:size (+ size 24)}))
-                :className "fa fa-ellipsis-v"}])])]))
+            [:span
+              {:className "fa fa-ellipsis-v"}])])]))
 
 (defn instance-mapper [state]
   (let [hits (-> state :search-result :hits :hits)]
