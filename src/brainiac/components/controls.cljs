@@ -51,7 +51,7 @@
   (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
 
 (defn cloud-import [v]
-  (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters]))
+  (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters :replace-filter-types]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
   (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
   (swap! app/app-state assoc :applied (:default-applied v))
@@ -163,12 +163,13 @@
     [:div
       [:a {:className (str "action fa fa-refresh" (when (:loading state) " rotating"))
             :onClick (when-not (:loading state) #(go (>! search/req-chan {})))}]
+      [:a {:className "action fa fa-gear"
+            :onClick display-settings}]
       [:a {:className "action fa fa-newspaper-o"
             :style (when-not (-> state :cloud :instance-mapper) {:color :gray
                                                                   :cursor :auto})
-            :onClick #(when (-> state :cloud :instance-mapper) (toggle-source %))}]
-      [:a {:className "action fa fa-gear"
-            :onClick display-settings}]]))
+            :onClick #(when (-> state :cloud :instance-mapper) (toggle-source %))}]]))
+
 
 (defn update-controls [_ _ prev cur]
   (go

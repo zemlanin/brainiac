@@ -239,10 +239,15 @@
   (let [state (rum/react app/app-state)
         applied (:applied state)
         doc-type (-> state :endpoint :selected :doc-type keyword)
+        type-replacements (-> state :cloud :replace-filter-types)
         filters (when doc-type (-> state :mappings doc-type :properties))]
     [:div
       [:ul (for [[n filter-data] (->> filters
                                     (into [])
                                     (sort-by first)
-                                    (sort-by #(contains? applied (first %)) >))]
+                                    (sort-by #(contains? applied (first %)) >)
+                                    (map (fn [[n v]]
+                                            (if (contains? type-replacements n)
+                                              [n (n type-replacements)]
+                                              [n v]))))]
               (match-filter-type n filter-data (get applied n)))]]))
