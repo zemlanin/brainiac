@@ -58,12 +58,50 @@
             (str/replace line #"^\s+" "\u00a0")
             [:br]])]]))
 
+(defn stats-modal []
+  (let [state @app/app-state
+        field (:displayed-stats state)
+        {buckets :buckets others :sum_other_doc_count error-bound :doc_count_error_upper_bound} (-> state :search-result :facet-counters field)
+        max-count (-> buckets first :doc_count)]
+    [:div {}
+      [:h3 {:style {:margin 0}} (name field) " stats"]
+      [:table {}
+        [:tbody {}
+          (for [{key :key count :doc_count} buckets]
+            [:tr {}
+              [:td {:style {:paddingTop "0.5em"}} key]
+              [:td {:style {:paddingLeft "1em"
+                            :paddingTop "0.5em"}}
+                [:div {:style {:color :white
+                                :background-color "#00A500"}} count]]
+              [:td {:style {:paddingTop "0.5em"
+                            :width "40vw"}}
+                ; count
+                [:div {:style {:width (str (* 100 (/ count max-count)) "%")
+                                :color "#00A500"
+                                :background-color "#00A500"}} "."]]])]]
+
+      (when-not (zero? others)
+        [:div {:style {:paddingTop "0.5em"}}
+          [:b {}
+            "+" others
+            (when-not (zero? error-bound)
+              [:sup {} (str " ±" error-bound)])
+            " others"]])]))
+
+(defn display-stats [field]
+  (let [modals (:modals @app/app-state)]
+    (when (zero? (count modals))
+      (swap! app/app-state assoc :displayed-stats field)
+      (swap! app/app-state assoc :modals [#'stats-modal]))))
+
 (rum/defc products-component < rum/reactive []
   (let [state (rum/react app/app-state)
         search-result (-> state :search-result)
         instances (-> state :instances)
         loading (-> state :loading)
         total (-> state :search-result :hits :total)
+        facet-counters (-> state :search-result :facet-counters)
         size (count instances)
         display-fn ;(case (-> state :display-fn)
                     ;  :source es-source-component
@@ -72,7 +110,19 @@
                       es-source-component
                       pretty-component)]
     [:div {:className "pure-g"}
-      [:h3 {:className "pure-u-1"} (if total (str "documents / " total) "documents")]
+      [:h3 {:className "pure-u-1"
+            :style {:marginTop 0}}
+        (if total (str "total: " total) "documents")]
+      (when-not (empty? facet-counters)
+        [:h4 {:className "pure-u-1"
+              :style {:marginTop 0}}
+          (for [[n {buckets :buckets others :sum_other_doc_count error-bound :doc_count_error_upper_bound}] facet-counters]
+            [ (if (> (count buckets) 1) :a :span)
+              {:onClick (when (> (count buckets) 1) #(display-stats n))}
+              (name n) ": "
+              (+ others (count buckets))
+              (when-not (zero? error-bound)
+                [:sup {} (str " ±" error-bound)])])])
       [:div (map display-fn instances)]
       (when
         (and

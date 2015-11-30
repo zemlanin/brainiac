@@ -51,7 +51,8 @@
   (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
 
 (defn cloud-import [v]
-  (swap! app/app-state assoc-in [:cloud] (select-keys v [:instance-mapper :suggesters :replace-filter-types]))
+  (swap! app/app-state assoc :cloud
+    (select-keys v [:instance-mapper :suggesters :replace-filter-types :facet-counters]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
   (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
   (swap! app/app-state assoc :applied (:default-applied v))

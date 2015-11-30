@@ -62,7 +62,7 @@
 (def req-chan (chan (sliding-buffer 1)))
 (def cats-chan (chan (sliding-buffer 1)))
 
-(defn extract-categories-suggestions [resp field]
+(defn extract-suggestions [resp field]
   (let [state @app/app-state
         field-settings (-> state :cloud :suggesters field)
         display-field (cond
@@ -88,6 +88,9 @@
                             id)
                     :count doc_count}))))))
 
+(defn extract-counters [resp field]
+  (-> resp :aggregations field))
+
 (go
   (while true
     (when-let [msg (<! req-chan)]
@@ -97,23 +100,28 @@
             applied-match (filter some? (map get-match-cond applied))
             state @app/app-state
             suggesters (-> state :cloud :suggesters keys)
+            counter-fields (-> state :cloud :facet-counters)
             agg-fields (concat suggesters (get-obj-fields))
-            params {:aggs (into {} (for [field agg-fields]
-                                      (let [settings (-> state :cloud :suggesters field)
-                                            agg-field (cond
-                                                        (:agg-field settings) (:agg-field settings)
-                                                        (-> field get-mapping-data :id) (str (name field) ".id")
-                                                        :else (name field))
-                                            display-field (cond
-                                                            (:display-field settings) (:display-field settings)
-                                                            (-> field get-mapping-data :name) :name
-                                                            :else nil)]
-                                        {field
-                                          (if display-field
-                                              {:terms {:field agg-field}
-                                                :aggs {:top {:top_hits {:size 1
-                                                                        :_source {:include field}}}}}
-                                              {:terms {:field agg-field}})})))
+            suggesters-params (into {} (for [field agg-fields]
+                                          (let [settings (-> state :cloud :suggesters field)
+                                                agg-field (cond
+                                                            (:agg-field settings) (:agg-field settings)
+                                                            (-> field get-mapping-data :id) (str (name field) ".id")
+                                                            :else (name field))
+                                                display-field (cond
+                                                                (:display-field settings) (:display-field settings)
+                                                                (-> field get-mapping-data :name) :name
+                                                                :else nil)]
+                                            {field
+                                              (if display-field
+                                                  {:terms {:field agg-field}
+                                                    :aggs {:top {:top_hits {:size 1
+                                                                            :_source {:include field}}}}}
+                                                  {:terms {:field agg-field}})})))
+            facet-counters-params (into {} (for [field counter-fields]
+                                              {field {:terms {:field (name field)
+                                                              :size 20}}}))
+            params {:aggs (merge suggesters-params facet-counters-params)
                     :query {:filtered {:filter
                                         {:bool
                                           {:must
@@ -123,9 +131,11 @@
                   (<? (POST (es-endpoint-search) {:params params}))
                   (catch js/Error e
                     nil))
-            suggestions (into {} (for [field agg-fields] {field (extract-categories-suggestions raw field)}))
+            suggestions (into {} (for [field agg-fields] {field (extract-suggestions raw field)}))
+            facet-counters (into {} (for [field counter-fields] {field (extract-counters raw field)}))
             search-result (-> raw
                               (assoc :suggestions suggestions)
+                              (assoc :facet-counters facet-counters)
                               (dissoc :aggregations))]
         (swap! app/app-state dissoc :loading)
         (swap! app/app-state assoc :search-result search-result)))))
@@ -164,7 +174,7 @@
                         {:query {:prefix {query-field value}}}}}
             raw (<! (POST (es-endpoint-search) {:params params}))
             field-suggestions (->> raw
-                                    (#(extract-categories-suggestions % field))
+                                    (#(extract-suggestions % field))
                                     (sort-by #(= -1 (.indexOf (display-field %) value))))]
         (swap! app/app-state dissoc :loading)
         (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions)))))
