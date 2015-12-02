@@ -108,7 +108,7 @@
                     ;  es-source-component)
                     (if (and (-> state :display-source) (-> state :cloud :instance-mapper))
                       es-source-component
-                      pretty-component)]
+                      #(if (:mapped %) (pretty-component %) (es-source-component %)))]
     [:div {:className "pure-g"}
       [:h3 {:className "pure-u-1"
             :style {:marginTop 0}}
@@ -150,7 +150,7 @@
           (if-let [url (-> state :cloud :instance-mapper)]
             (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
                       (for [r (-> cloud-response :instances)]
-                        (assoc r :es (get hits-map (:id r))))))
+                        (assoc r :es (get hits-map (:id r)) :mapped true))))
             (>! ch (map #(assoc {} :es %) hits))))
 
         ch))))
@@ -159,6 +159,7 @@
   (when-not (u/=in prev cur :search-result :hits)
     (go
       (swap! app/app-state assoc :loading true)
+      (swap! app/app-state assoc :instances (map #(assoc {} :es %) (-> cur :search-result :hits :hits)))
       (let [instances (<! (instance-mapper cur))]
         (swap! app/app-state assoc :instances instances)
         (swap! app/app-state dissoc :loading)))))
