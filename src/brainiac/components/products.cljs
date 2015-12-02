@@ -139,6 +139,15 @@
             [:span
               {:className "fa fa-ellipsis-v"}])])]))
 
+(defn assoc-mapped [v]
+  (assoc v :mapped :true))
+
+(defn wrap-es [v]
+  {:es v})
+
+(defn assoc-es [hits-map]
+  (fn [{id :id :as v}] (assoc v :es (get hits-map id))))
+
 (defn instance-mapper [state]
   (let [hits (-> state :search-result :hits :hits)]
     (if (= 0 (count hits))
@@ -149,9 +158,10 @@
         (go
           (if-let [url (-> state :cloud :instance-mapper)]
             (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
-                      (for [r (-> cloud-response :instances)]
-                        (assoc r :es (get hits-map (:id r)) :mapped true))))
-            (>! ch (map #(assoc {} :es %) hits))))
+                      (->> (:instances cloud-response)
+                        (map (assoc-es hits-map))
+                        (map assoc-mapped))))
+            (>! ch (map wrap-es hits))))
 
         ch))))
 
@@ -159,7 +169,7 @@
   (when-not (u/=in prev cur :search-result :hits)
     (go
       (swap! app/app-state assoc :loading true)
-      (swap! app/app-state assoc :instances (map #(assoc {} :es %) (-> cur :search-result :hits :hits)))
+      (swap! app/app-state assoc :instances (map wrap-es (-> cur :search-result :hits :hits)))
       (let [instances (<! (instance-mapper cur))]
         (swap! app/app-state assoc :instances instances)
         (swap! app/app-state dissoc :loading)))))
