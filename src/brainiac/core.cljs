@@ -7,6 +7,7 @@
               [brainiac.components.filters :as filters]
               [brainiac.components.controls :as controls]
               [brainiac.components.appliedFilters :as appliedFilters]
+              [brainiac.components.savedFilters :as savedFilters]
               [brainiac.components.products :as products]))
 
 (enable-console-print!)
@@ -20,6 +21,10 @@
 (rum/mount
   (modals/modals-component)
   (.getElementById js/document "modals"))
+
+(rum/mount
+  (savedFilters/savedFilters-component)
+  (.getElementById js/document "savedFilters"))
 
 (rum/mount
   (filters/filters-component)

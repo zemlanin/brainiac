@@ -60,7 +60,6 @@
                         [(_ :guard #(-> % js/parseFloat js/isNaN not)) _] (assoc-in old-value [:value t] v)
                         ; TODO: save another value when another is removed
                         :else nil))]
-      (println new-value)
       (if (some? new-value)
         (swap! app/app-state assoc-in [:applied n] new-value)
         (swap! app/app-state assoc :applied (dissoc applied n)))

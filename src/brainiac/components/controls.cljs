@@ -52,10 +52,9 @@
 
 (defn cloud-import [v]
   (swap! app/app-state assoc :cloud
-    (select-keys v [:instance-mapper :suggesters :replace-filter-types :facet-counters]))
+    (select-keys v [:instance-mapper :suggesters :replace-filter-types :facet-counters :builtin-filters]))
   ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
   (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
-  (swap! app/app-state assoc :applied (:default-applied v))
   (go
     (>! search/req-chan {:size 0})
     (>! search/req-chan {})))

@@ -112,6 +112,38 @@ a:not([href]):not(.fa) {
   color: white;
 }
 
+#savedFilters {
+}
+
+#savedFilters a.save {
+  margin-left: 1em;
+  padding: 1em;
+  color: black;
+  border-radius: 1em;
+  background-color: #00A500;
+}
+
+#savedFilters ul {
+  display: inline-block;
+  padding-left: 1em;
+}
+
+#savedFilters li {
+  display: inline-block;
+  list-style-type: none;
+  margin-right: 0.5em;
+  margin-bottom: 0.7em;
+  background-color: white;
+  padding: 0.3em 0.6em;
+  border-radius: 1em;
+  box-shadow: 0.1em 0.1em 1em gray;
+}
+
+#savedFilters li.active {
+  font-weight: bold;
+  background-color: #DFFEE5;
+}
+
 #appliedFilters {
 }
 
@@ -125,7 +157,7 @@ a:not([href]):not(.fa) {
   margin-right: 0.5em;
   margin-bottom: 0.7em;
   background-color: white;
-  padding: 0.5em;
+  padding: 0.2em 0.4em;
   border-radius: 1em;
   box-shadow: 0.1em 0.1em 1em gray;
 }

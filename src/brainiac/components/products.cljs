@@ -169,7 +169,7 @@
   (when-not (u/=in prev cur :search-result :hits)
     (go
       (swap! app/app-state assoc :loading true)
-      (swap! app/app-state assoc :instances (map wrap-es (-> cur :search-result :hits :hits)))
+      (swap! app/app-state assoc :instances (->> cur :search-result :hits :hits (map wrap-es)))
       (let [instances (<! (instance-mapper cur))]
         (swap! app/app-state assoc :instances instances)
         (swap! app/app-state dissoc :loading)))))
