@@ -89,7 +89,7 @@
     (if (some? new-value)
       (do
         (swap! app/app-state assoc-in [:applied n] new-value)
-        (go (>! search/cats-chan {:field n})))
+        (go (>! search/req-suggestions-chan {:field n})))
       (do
         (swap! app/app-state assoc :applied (dissoc applied n))
         (go (>! search/req-chan {}))))))

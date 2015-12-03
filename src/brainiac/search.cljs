@@ -1,10 +1,10 @@
 (ns ^:figwheel-always brainiac.search
-    (:require-macros [cljs.core.async.macros :refer [go]]
+    (:require-macros [cljs.core.async.macros :refer [go go-loop]]
                      [brainiac.macros :refer [<?]])
     (:require [brainiac.utils :as u]
               [brainiac.appstate :as app]
               [brainiac.ajax :refer [GET POST]]
-              [cljs.core.async :refer [<! chan sliding-buffer close!]]
+              [cljs.core.async :as async :refer [<! chan sliding-buffer close! timeout]]
               [cljs.core.match :refer-macros [match]]))
 
 (defn es-endpoint []
@@ -60,7 +60,7 @@
 
 
 (def req-chan (chan (sliding-buffer 1)))
-(def cats-chan (chan (sliding-buffer 1)))
+(def req-suggestions-chan (chan (sliding-buffer 1)))
 
 (defn extract-suggestions [resp field]
   (let [state @app/app-state
@@ -91,14 +91,13 @@
 (defn extract-counters [resp field]
   (-> resp :aggregations field))
 
-(go
-  (while true
-    (when-let [msg (<! req-chan)]
-      (swap! app/app-state assoc :loading true)
-      (let [applied (filter #(not (nil? (second %))) (:applied @app/app-state))
+(defn perform-search [msg]
+  (let [ch (chan 1)]
+    (go
+      (let [state @app/app-state
+            applied (filter #(not (nil? (second %))) (:applied state))
             applied-filtered (filter some? (map get-filter-cond applied))
             applied-match (filter some? (map get-match-cond applied))
-            state @app/app-state
             suggesters (-> state :cloud :suggesters keys)
             counter-fields (-> state :cloud :facet-counters)
             agg-fields (concat suggesters (get-obj-fields))
@@ -137,13 +136,25 @@
                               (assoc :suggestions suggestions)
                               (assoc :facet-counters facet-counters)
                               (dissoc :aggregations))]
-        (swap! app/app-state dissoc :loading)
-        (swap! app/app-state assoc :search-result search-result)))))
+        (>! ch search-result)))
+    ch))
 
-(go
-  (while true
-    (when-let [msg (<! cats-chan)]
+(let [requests-ch (chan (sliding-buffer 5))]
+  (go-loop [msg (<! req-chan)]
+    (when msg
       (swap! app/app-state assoc :loading true)
+      (>! requests-ch (perform-search msg))
+      (recur (<! req-chan))))
+  (go
+    (while true
+      (when-let [request (<! requests-ch)]
+        (swap! app/app-state assoc :search-result (<! request))
+        (when-not (some some? (-> requests-ch .-buf .-buf .-arr))
+          (swap! app/app-state assoc :loading false))))))
+
+(defn get-suggestions [msg]
+  (let [ch (chan 1)]
+    (go
       (let [field (-> msg :field)
             state @app/app-state
             field-settings (-> state :cloud :suggesters field)
@@ -172,12 +183,27 @@
                     :query
                       {:filtered
                         {:query {:prefix {query-field value}}}}}
-            raw (<! (POST (es-endpoint-search) {:params params}))
-            field-suggestions (->> raw
-                                    (#(extract-suggestions % field))
-                                    (sort-by #(= -1 (.indexOf (display-field %) value))))]
-        (swap! app/app-state dissoc :loading)
-        (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions)))))
+            raw (<! (POST (es-endpoint-search) {:params params}))]
+          (>! ch [field (->> raw
+                            (#(extract-suggestions % field))
+                            (sort-by #(= -1 (.indexOf (display-field %) value))))])))
+    ch))
+
+(def throttled-req-suggestions-chan (u/throttle req-suggestions-chan 2000))
+
+(let [requests-ch (chan (sliding-buffer 5))]
+  (go-loop [msg (<! throttled-req-suggestions-chan)]
+    (when msg
+      (swap! app/app-state assoc :loading true)
+      (>! requests-ch (get-suggestions msg))
+      (recur (<! throttled-req-suggestions-chan))))
+  (go-loop [request (<! requests-ch)]
+    (when request
+      (let [[field field-suggestions] (<! request)]
+        (swap! app/app-state assoc-in [:search-result :suggestions field] field-suggestions)
+        (when-not (some some? (-> requests-ch .-buf .-buf .-arr))
+          (swap! app/app-state assoc :loading false)))
+      (recur (<! requests-ch)))))
 
 (defn setup-watcher []
   (get-mapping))
