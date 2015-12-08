@@ -1,6 +1,5 @@
 (ns ^:figwheel-always brainiac.components.controls
-    (:require-macros [cljs.core.async.macros :refer [go]]
-                     [brainiac.macros :refer [<?]])
+    (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [rum.core :as rum]
               [schema.core :as s :include-macros true]
               [brainiac.utils :as u]

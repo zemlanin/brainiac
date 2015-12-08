@@ -1,5 +1,6 @@
 (ns ^:figwheel-always brainiac.components.products
-    (:require-macros [cljs.core.async.macros :refer [go]])
+    (:require-macros [cljs.core.async.macros :refer [go]]
+                     [brainiac.macros :refer [<?]])
     (:require [rum.core :as rum]
               [brainiac.utils :as u]
               [brainiac.ajax :refer [GET]]
@@ -157,10 +158,15 @@
             ids (keys hits-map)]
         (go
           (if-let [url (-> state :cloud :instance-mapper)]
-            (>! ch (let [cloud-response (<! (GET (str url "?ids=" (str/join "," ids))))]
-                      (->> (:instances cloud-response)
-                        (map (assoc-es hits-map))
-                        (map assoc-mapped))))
+            (let [{instances :instances} (try (<? (GET (str url "?ids=" (str/join "," ids))))
+                                          (catch js/Error e
+                                            nil))]
+              (>! ch
+                (if instances
+                  (->> instances
+                      (map (assoc-es hits-map))
+                      (map assoc-mapped))
+                  :error)))
             (>! ch (map wrap-es hits))))
 
         ch))))
@@ -171,7 +177,8 @@
       (swap! app/app-state assoc :loading true)
       (swap! app/app-state assoc :instances (->> cur :search-result :hits :hits (map wrap-es)))
       (let [instances (<! (instance-mapper cur))]
-        (swap! app/app-state assoc :instances instances)
+        (when-not (= :error instances)
+          (swap! app/app-state assoc :instances instances))
         (swap! app/app-state dissoc :loading)))))
 
 
