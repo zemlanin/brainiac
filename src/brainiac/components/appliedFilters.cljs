@@ -3,7 +3,8 @@
     (:require [rum.core :as rum]
               [brainiac.appstate :as app]
               [cljs.core.async :refer [>!]]
-              [brainiac.search :as search]))
+              [brainiac.search :as search]
+              [cljs.core.match :refer-macros [match]]))
 
 (defn toggle-value [k v]
   (let [applied (:applied @app/app-state)]
@@ -22,13 +23,16 @@
               (if (and obj-field (-> v obj-field not))
                 nil
                 [:li {:key (name k)}
-                     (when (= :boolean t)
-                       [:a {:className (if v "fa fa-toggle-on" "fa fa-toggle-off")
-                            :style {:marginRight "0.5em"}
-                            :onClick #(toggle-value k v)}])
-                     (if (:name v)
-                        [:span (name k) ": " (:name v)]
-                        [:span (name k)])
-                     [:a {:className "fa fa-remove"
-                           :style {:marginLeft "0.5em"}
-                           :onClick #(remove-value k)}]]))]]))
+                  (when (= :boolean t)
+                    [:a {:className (if v "fa fa-toggle-on" "fa fa-toggle-off")
+                          :style {:marginRight "0.5em"}
+                          :onClick #(toggle-value k v)}])
+                  (match v
+                    {:name n} [:span (name k) ": " n]
+                    {:min a :max b} [:span a " ≤ " (name k) " ≤" b]
+                    {:min a} [:span (name k) " ≥ " a]
+                    {:max b} [:span (name k) " ≤ " b]
+                    :else [:span (name k)])
+                  [:a {:className "fa fa-remove"
+                       :style {:marginLeft "0.5em"}
+                       :onClick #(remove-value k)}]]))]]))

@@ -239,9 +239,10 @@
         applied (:applied state)
         doc-type (-> state :endpoint :selected :doc-type keyword)
         type-replacements (-> state :cloud :replace-filter-types)
-        filters (when doc-type (-> state :mappings doc-type :properties))]
+        filters (when doc-type (-> state :mappings doc-type :properties))
+        script-filters (-> state :cloud :script-filters)]
     [:div
-      [:ul (for [[n filter-data] (->> filters
+      [:ul (for [[n filter-data] (->> (merge filters script-filters)
                                     (into [])
                                     (sort-by first)
                                     (sort-by #(contains? applied (first %)) >)

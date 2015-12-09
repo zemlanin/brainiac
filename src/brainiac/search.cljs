@@ -29,11 +29,16 @@
               :mappings)))))
 
 (defn get-filter-cond [[n f]]
-  (match f
-    {:type :boolean :value v} {:term {n v}}
-    {:type :number :value {:min a :max b}} {:range {n {:gte a :lte b}}}
-    {:type :number :value {:min a}} {:range {n {:gte a}}}
-    {:type :number :value {:max b}} {:range {n {:lte b}}}
+  (match [(-> @app/app-state :cloud :script-filters n :script) f]
+    [nil {:type :boolean :value v}] {:term {n v}}
+    [s {:type :boolean :value v}] {:script {:script (get s v)}}
+
+    [nil {:type :number :value {:min a :max b}}] {:range {n {:gte a :lte b}}}
+    [nil {:type :number :value {:min a}}] {:range {n {:gte a}}}
+    [nil {:type :number :value {:max b}}] {:range {n {:lte b}}}
+    [s {:type :number :value {:min a :max b}}] {:script {:script (get s #{:min :max}) :params {:min a :max b}}}
+    [s {:type :number :value {:min a}}] {:script {:script (get s #{:min}) :params {:min a}}}
+    [s {:type :number :value {:max b}}] {:script {:script (get s #{:max}) :params {:max b}}}
     :else nil))
 
 
