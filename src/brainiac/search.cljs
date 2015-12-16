@@ -70,10 +70,8 @@
 (defn extract-suggestions [resp field]
   (let [state @app/app-state
         field-settings (-> state :cloud :suggesters field)
-        display-field (cond
-                        (:display-field field-settings) (:display-field field-settings)
-                        (-> field get-mapping-data :name) :name
-                        :else nil)]
+        display-field (when (-> field get-mapping-data :name)
+                        :name)]
     (-> resp
         :aggregations
         field
@@ -112,10 +110,9 @@
                                                             (:agg-field settings) (:agg-field settings)
                                                             (-> field get-mapping-data :id) (str (name field) ".id")
                                                             :else (name field))
-                                                display-field (cond
-                                                                (:display-field settings) (:display-field settings)
-                                                                (-> field get-mapping-data :name) :name
-                                                                :else nil)]
+                                                display-field (when
+                                                                (-> field get-mapping-data :name)
+                                                                :name)]
                                             {field
                                               (if display-field
                                                   {:terms {:field agg-field}
@@ -171,10 +168,8 @@
                         (:agg-field field-settings) (:agg-field field-settings)
                         (-> field get-mapping-data :id) (str (name field) ".id")
                         :else (name field))
-            display-field (cond
-                            (:display-field field-settings) (:display-field field-settings)
-                            (-> field get-mapping-data :name) :name
-                            :else identity)
+            display-field (when (-> field get-mapping-data :name)
+                            :name)
             value (-> state
                       :applied
                       field

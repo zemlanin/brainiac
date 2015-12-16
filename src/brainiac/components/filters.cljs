@@ -65,11 +65,10 @@
         (swap! app/app-state assoc :applied (dissoc applied n)))
       (go (>! search/req-chan {}))))
 
-(defn string-onchange [n e]
-  (.preventDefault e)
+
+(defn string-set-filter [n v]
   (let [applied (:applied @app/app-state)
         old-value (n applied)
-        v (-> e .-target .-value)
         new-value (if (empty? v)
                     nil
                     {:type :string :value v})]
@@ -78,7 +77,12 @@
       (swap! app/app-state assoc :applied (dissoc applied n)))
     (go (>! search/req-chan {}))))
 
-(defn suggester-onchange [n e]
+
+(defn string-onchange [n e]
+  (.preventDefault e)
+  (string-set-filter n (-> e .-target .-value)))
+
+(defn obj-onchange [n e]
   (.preventDefault e)
   (let [applied (:applied @app/app-state)
         old-value (n applied)
@@ -94,7 +98,7 @@
         (swap! app/app-state assoc :applied (dissoc applied n))
         (go (>! search/req-chan {}))))))
 
-(defn suggester-suggestion-onclick [n v]
+(defn obj-suggestion-onclick [n v]
   (let [applied (:applied @app/app-state)
         old-value (n applied)
         new-value {:type :obj :value v :obj-field :id}]
@@ -173,29 +177,35 @@
               :onChange #(float-onchange n :max %)}]])
 
 (defn string-filter [n {v :value}]
-  [:fieldset
-    [:legend
-      [:label
-        (name n)
-        (when v [:a {:class "fa fa-remove"}])
-        [:input {:type :checkbox
-                  :style {:display :none}
-                  :value ""
-                  :checked v
-                  :onChange #(when-not (-> % .-target .-checked) (string-onchange n %))}]]]
-
-    [:input {:style {:width "80%"}
-              :value v
-              :onChange #(string-onchange n %)}]])
-
-(defn suggester-filter [n {v :value props :properties}]
   (let [state @app/app-state
-        suggestions (-> state :search-result :suggestions n)
-        field-settings (-> state :cloud :suggesters n)
-        checked (cond
-                  (:checked field-settings) (:checked field-settings)
-                  (:id props) :id
-                  :else identity)]
+        suggester (some? (-> state :cloud :suggesters n))
+        suggestions (when suggester (-> state :search-result :suggestions n))]
+
+    [:fieldset
+      [:legend
+        [:label
+          (name n)
+          (when v [:a {:class "fa fa-remove"}])
+          [:input {:type :checkbox
+                    :style {:display :none}
+                    :value ""
+                    :checked v
+                    :onChange #(when-not (-> % .-target .-checked) (string-onchange n %))}]]]
+      (if suggester
+        (if v
+          [:ul
+            [:li [:span v]]]
+          [:ul (for [s (take 10 suggestions)]
+                  [:li [:a
+                          {:onClick #(string-set-filter n (:name s))}
+                          (:name s) [:sup (:count s)]]])])
+        [:input {:style {:width "80%"}
+                  :value v
+                  :onChange #(string-onchange n %)}])]))
+
+(defn obj-filter [n {v :value props :properties}]
+  (let [state @app/app-state
+        suggestions (-> state :search-result :suggestions n)]
 
     [:fieldset
       [:legend
@@ -205,20 +215,19 @@
           [:input {:type :checkbox
                     :style {:display :none}
                     :value ""
-                    :checked (-> v checked)
-                    :onChange #(when-not (-> % .-target .-checked) (suggester-onchange n %))}]]]
+                    :checked (-> v :id)
+                    :onChange #(when-not (-> % .-target .-checked) (obj-onchange n %))}]]]
 
       [:input {:style {:width "80%"}
                 :value (:name v)
-                :onChange #(suggester-onchange n %)}]
+                :onChange #(obj-onchange n %)}]
       [:ul (for [s (take 10 suggestions)]
               [:li [:a
-                      {:onClick #(suggester-suggestion-onclick n s)}
+                      {:onClick #(obj-suggestion-onclick n s)}
                       (:name s) [:sup (:count s)]]])]]))
 
 (defn match-filter-type [filter-name filter-data value]
   (match [filter-name filter-data]
-    [_ :guard #(contains? (-> @app/app-state :cloud :suggesters) %) _] [:li {:key filter-name} (suggester-filter filter-name value)]
     [_ {:type "boolean"}] [:li {:key filter-name} (boolean-filter filter-name value)]
     [_ {:type "integer"}] [:li {:key filter-name} (integer-filter filter-name value)]
     [_ {:type "long"}] [:li {:key filter-name} (integer-filter filter-name value)]
@@ -226,7 +235,7 @@
     [_ {:type "float"}] [:li {:key filter-name} (float-filter filter-name value)]
     [_ {:type "double"}] [:li {:key filter-name} (float-filter filter-name value)]
     [_ {:index "no"}] nil
-    [_ {:properties {:id _ :name _}}] [:li {:key filter-name} (suggester-filter filter-name value)]
+    [_ {:properties {:id _ :name _}}] [:li {:key filter-name} (obj-filter filter-name value)]
     [_ {:properties _}] [:li {:key filter-name
                               :style {:color "gray"
                                       :fontSize "0.6em"}} "obj" (str filter-name)]
