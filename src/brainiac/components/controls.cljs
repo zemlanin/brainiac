@@ -204,7 +204,7 @@
 (defn setup-watcher []
   (display-settings)
   (go-loop []
-    (<! (async/timeout 10000))
+    (<! (async/timeout 600000))
     (>! notify-chan {:mark-as-read false})
     (recur))
   (go-loop []
