@@ -4,6 +4,7 @@
     (:require [brainiac.utils :as u]
               [brainiac.appstate :as app]
               [brainiac.ajax :refer [GET POST]]
+              [clojure.string]
               [cljs.core.async :as async :refer [<! chan sliding-buffer close! timeout]]
               [cljs.core.match :refer-macros [match]]))
 
@@ -46,13 +47,11 @@
   (-> @app/app-state :mappings :product :properties field :properties))
 
 (defn get-match-cond [[n f]]
-  (let [agg-field (cond
-                    (-> n get-mapping-data :id) (str (name n) ".id")
-                    :else nil)]
+  (let [agg-field (when (-> n get-mapping-data :id) (str (name n) ".id"))]
     (match [agg-field f]
       [_ {:type :string :value v}] {:query {:match {n v}}}
-      [nil {:type :obj :value v :obj-field obj-field}] {:query {:match {(name n) (:name v)}}}
-      [(_ :guard some?) {:type :obj :value {:id v} :obj-field obj-field}] {:query {:match {agg-field v}}}
+      [nil {:type :obj :value v}] {:query {:match {(name n) (:name v)}}}
+      [(_ :guard some?) {:type :obj :value {:id v}}] {:query {:match {agg-field v}}}
       :else nil)))
 
 (defn get-obj-fields []
@@ -154,6 +153,15 @@
         (when-not (some some? (-> requests-ch .-buf .-buf .-arr))
           (swap! app/app-state assoc :loading false))))))
 
+(defn number-of-encounters [value target]
+  (let [value (.toLowerCase value)
+        target (.toLowerCase target)]
+
+    (apply +
+      (map
+        #(when (and (not (clojure.string/blank? %)) (> (.indexOf target %) -1)) 1)
+        (clojure.string/split value #" ")))))
+
 (defn get-suggestions [msg]
   (let [ch (chan 1)]
     (go
@@ -182,11 +190,12 @@
                                                       :_source {:include field}}}}}}
                     :query
                       {:filtered
-                        {:query {:prefix {query-field value}}}}}
+                        {:query {:match {query-field {:operator :and :fuzziness :AUTO :query value}}}}}}
             raw (<! (POST (es-endpoint-search) {:params params}))]
           (>! ch [field (->> raw
                             (#(extract-suggestions % field))
-                            (sort-by #(= -1 (.indexOf (display-field %) value))))])))
+                            (sort-by #(number-of-encounters value (display-field %)) >))])))
+
     ch))
 
 (def throttled-req-suggestions-chan (u/throttle req-suggestions-chan 2000))
