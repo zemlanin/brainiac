@@ -1,5 +1,5 @@
 (ns ^:figwheel-always brainiac.components.controls
-    (:require-macros [cljs.core.async.macros :refer [go]])
+    (:require-macros [cljs.core.async.macros :refer [go go-loop]])
     (:require [rum.core :as rum]
               [schema.core :as s :include-macros true]
               [brainiac.utils :as u]
@@ -8,7 +8,7 @@
               [brainiac.search :as search]
               [cljs.reader :refer [read-string]]
               [brainiac.ajax :refer [GET POST]]
-              [cljs.core.async :refer [<!]]))
+              [cljs.core.async :as async :refer [<!]]))
 
 (def ENTER 13)
 
@@ -136,51 +136,80 @@
                     (for [doc-type doc-types]
                       [:option {:value doc-type} (name doc-type)])]]))
 
-         [:div {:className "pure-g"}
-             [:div {:className "pure-u-1"}
-               [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
-                         [:li
-                           [:a {:onClick #(cloud-import sh)} (:name sh)]])]]]
+          [:div {:className "pure-u-1-3"}
+              [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
+                          [:li
+                            [:a {:onClick #(cloud-import sh)} (:name sh)]])]]
 
-         [:div {:className "pure-u-1"}
-           [:label {:className "pure-u-1"}
+          [:div {:className "pure-u-2-3 notifications"}
+              [:b {:class "title"} "notifications"]
+              [:ul nil
+                (for [n (->> state :notifications :unread (sort-by :id))]
+                  [:li
+                    [:b nil (:text n)]])
+                (for [n (->> state :notifications :read (sort-by :id >) (take 5))]
+                  [:li
+                    [:span nil (:text n)]])]]
+
+          [:div {:className "pure-u-1"}
+            [:label {:className "pure-u-1"}
               [:a {:on-click #(swap! app/app-state assoc-in [:settings :show-state] (not show-state))} "state"]
               (when show-state
                  [:textarea {:rows 6
                              :className "pure-u-1"
                              :value (str state)}])]]]]]))
 
+(defonce notify-chan (async/chan))
+
 (defn display-settings []
   (let [modals (:modals @app/app-state)]
     (when (zero? (count modals))
-      (go (->> (<! (GET "/edn/config.edn" {:response-format :edn}))
-              (swap! app/app-state assoc :cs-config)))
+      (go
+        (let [cs-config (<! (GET "/edn/config.edn" {:response-format :edn}))]
+          (swap! app/app-state assoc :cs-config cs-config)
+          (when-let [notifications-url (-> cs-config :notifications :url)]
+            (async/>! notify-chan {:mark-as-read true}))))
       (swap! app/app-state assoc :modals [#'settings-modal]))))
 
 (defn toggle-source [e]
   (swap! app/app-state assoc :display-source (-> @app/app-state :display-source not)))
 
 (rum/defc controls-component < rum/reactive []
-  (let [state (rum/react app/app-state)]
+  (let [state (rum/react app/app-state)
+        loading (-> state :loading)
+        instance-mapper (-> state :cloud :instance-mapper)
+        unread (-> state :notifications :unread not-empty)]
     [:div
-      [:a {:className (str "action fa fa-refresh" (when (:loading state) " rotating"))
-            :onClick (when-not (:loading state) #(go (>! search/req-chan {})))}]
-      [:a {:className "action fa fa-gear"
+      [:a {:className (str "action fa fa-refresh" (when loading " rotating"))
+            :onClick (when-not loading #(go (>! search/req-chan {})))}]
+      [:a {:className (str "action fa fa-gear" (when unread " notify-dot"))
             :onClick display-settings}]
       [:a {:className "action fa fa-newspaper-o"
-            :style (when-not (-> state :cloud :instance-mapper) {:color :gray
-                                                                  :cursor :auto})
-            :onClick #(when (-> state :cloud :instance-mapper) (toggle-source %))}]]))
+            :style (when-not instance-mapper {:color :gray
+                                              :cursor :auto})
+            :onClick #(when instance-mapper (toggle-source %))}]]))
 
+(defn handle-notifications [notifications mark-as-read]
+  (let [state @app/app-state
+        read (if mark-as-read notifications (-> state :notifications :read))
+        unread (filter #(not (some (partial = %) read)) notifications)]
+    (swap! app/app-state assoc :notifications {:unread unread :read read})))
 
 (defn update-controls [_ _ prev cur]
   (go
     (when-not (u/=in prev cur :endpoint :selected)
-      (do
-        (search/get-mapping)
-        (when-not (u/=in prev cur :endpoint :selected :host) (load-indices))))))
+      (search/get-mapping)
+      (when-not (u/=in prev cur :endpoint :selected :host) (load-indices)))))
 
 (defn setup-watcher []
-  (when-not (:endpoint @app/app-state) (display-settings))
-  (remove-watch app/app-state :controls-watcher)
+  (display-settings)
+  (go-loop []
+    (<! (async/timeout 10000))
+    (>! notify-chan {:mark-as-read false})
+    (recur))
+  (go-loop []
+    (when-let [{mark-as-read :mark-as-read} (<! notify-chan)]
+      (when-let [notifications-url (-> @app/app-state :cs-config :notifications :url)]
+        (handle-notifications (<! (GET notifications-url {:response-format :edn})) mark-as-read))
+      (recur)))
   (add-watch app/app-state :controls-watcher update-controls))

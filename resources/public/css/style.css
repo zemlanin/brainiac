@@ -39,6 +39,24 @@ a:not([href]):not(.fa) {
   animation: rotating 2s linear infinite;
 }
 
+.notify-dot {
+  position: relative;
+}
+
+.notify-dot::after {
+  color: red;
+  font-size: 0.2em;
+  content: "⬤";
+  position: absolute;
+  top: 0;
+  right: -0.5em;
+}
+
+.notifications .title {
+  list-style: none;
+  font-size: 1em;
+}
+
 #modals .wrapper {
   position: fixed;
   -webkit-transform: translateZ(0);

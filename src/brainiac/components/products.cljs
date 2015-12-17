@@ -37,8 +37,7 @@
                                              [:li [:img {:src i}]])])]
         [:div {:className "pure-u-1-24"}]
         [:div {:className "pure-u-15-24"
-                :style {
-                        :maxHeight 200
+                :style {:maxHeight 200
                         :overflow :auto
                         :WebkitTransform "translateZ(0)"}}
           (:description data)]]]])
@@ -140,11 +139,15 @@
             [:span
               {:className "fa fa-ellipsis-v"}])])]))
 
-(defn assoc-mapped [v]
-  (assoc v :mapped :true))
-
 (defn wrap-es [v]
   {:es v})
+
+(defn extend-with-instances [hits instances]
+  (map
+    #(if-let [instance (get instances (js/parseInt (:_id %)))]
+        (merge instance {:es % :mapped true})
+        {:es %})
+    hits))
 
 (defn assoc-es [hits-map]
   (fn [{id :id :as v}] (assoc v :es (get hits-map id))))
@@ -164,8 +167,9 @@
               (>! ch
                 (if instances
                   (->> instances
-                      (map (assoc-es hits-map))
-                      (map assoc-mapped))
+                    (map (juxt :id identity))
+                    (into (sorted-map))
+                    (extend-with-instances hits))
                   :error)))
             (>! ch (map wrap-es hits))))
 

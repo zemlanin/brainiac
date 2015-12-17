@@ -12,11 +12,11 @@
 
 (enable-console-print!)
 
-(modals/setup-watcher)
-(search/setup-watcher)
-(schema/setup-watcher)
-(controls/setup-watcher)
-(products/setup-watcher)
+(defonce modals-setup-watcher (modals/setup-watcher))
+(defonce search-setup-watcher (search/setup-watcher))
+(defonce schema-setup-watcher (schema/setup-watcher))
+(defonce controls-setup-watcher (controls/setup-watcher))
+(defonce products-setup-watcher (products/setup-watcher))
 
 (rum/mount
   (modals/modals-component)

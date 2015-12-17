@@ -1,4 +1,5 @@
-{:endpoint-shortcuts [{:name "localhost"
+{:notifications {:url "/edn/notifications.edn"}
+  :endpoint-shortcuts [{:name "localhost"
                         :host "localhost:9200"
                         :index "brainiac"
                         :doc-type "product"
