@@ -70,69 +70,71 @@
     (swap! app/app-state assoc-in field-state new-value)))
 
 (defn settings-modal []
-  (let [state @app/app-state]
+  (let [state @app/app-state
+        show-state (-> state :settings :show-state)]
     [:div
       [:form {:className "pure-form pure-form-stacked"
               :style {:width "60vw"}
               :action "#"}
 
         [:div {:className "pure-g"}
-          (let [field-path '(:settings :fields :host)
-                saved-path '(:endpoint :selected :host)
-                field-val (get-in state field-path)
-                saved-val (get-in state saved-path)]
-            [:label {:className "pure-u-1-3"} "host"
-              [:input {:className "pure-u-23-24"
-                        :type "text"
-                        :value (or field-val saved-val)
-                        :style {:borderColor (if field-val "red" (when saved-val "green"))}
-                        :onChange #(check-and-save-field-input % field-path saved-path)}]])
+          (when false ; TODO: remove entirely?
+            (let [field-path '(:settings :fields :host)
+                  saved-path '(:endpoint :selected :host)
+                  field-val (get-in state field-path)
+                  saved-val (get-in state saved-path)]
+              [:label {:className "pure-u-1-3"} "host"
+                [:input {:className "pure-u-23-24"
+                          :type "text"
+                          :value (or field-val saved-val)
+                          :style {:borderColor (if field-val "red" (when saved-val "green"))}
+                          :onChange #(check-and-save-field-input % field-path saved-path)}]])
 
-          (let [field-path '(:settings :fields :index)
-                saved-path '(:endpoint :selected :index)
-                field-val (get-in state field-path)
-                saved-val (get-in state saved-path)
+            (let [field-path '(:settings :fields :index)
+                  saved-path '(:endpoint :selected :index)
+                  field-val (get-in state field-path)
+                  saved-val (get-in state saved-path)
 
-                suggestions (when (or field-val (empty? saved-val))
-                              (->> state
-                                  :endpoint
-                                  :indices
-                                  keys
-                                  (map name)
-                                  (filter #(if field-val (.startsWith % field-val) true))
-                                  (take 3)))]
-            [:label {:className "pure-u-1-3"} "index"
-              [:input {:className "pure-u-23-24"
-                        :type "text"
-                        :style {:borderColor (if field-val "red" (when saved-val "green"))}
-                        :value (or field-val saved-val)
-                        :onChange #(check-and-save-field-input % field-path saved-path)
-                        :onKeyDown #(when (= ENTER (-> % .-keyCode))
-                                      (do
-                                        (.preventDefault %)
-                                        (when-let [f-suggestion (first suggestions)]
-                                          (write-new-field-input f-suggestion field-path saved-path))))}]
-              (for [i suggestions]
-                  [:a {:style {:marginRight "1em"
-                                :textDecoration "underline"}
-                        :onClick #(write-new-field-input i field-path saved-path)}
-                    i])])
+                  suggestions (when (or field-val (empty? saved-val))
+                                (->> state
+                                    :endpoint
+                                    :indices
+                                    keys
+                                    (map name)
+                                    (filter #(if field-val (.startsWith % field-val) true))
+                                    (take 3)))]
+              [:label {:className "pure-u-1-3"} "index"
+                [:input {:className "pure-u-23-24"
+                          :type "text"
+                          :style {:borderColor (if field-val "red" (when saved-val "green"))}
+                          :value (or field-val saved-val)
+                          :onChange #(check-and-save-field-input % field-path saved-path)
+                          :onKeyDown #(when (= ENTER (-> % .-keyCode))
+                                        (do
+                                          (.preventDefault %)
+                                          (when-let [f-suggestion (first suggestions)]
+                                            (write-new-field-input f-suggestion field-path saved-path))))}]
+                (for [i suggestions]
+                    [:a {:style {:marginRight "1em"
+                                  :textDecoration "underline"}
+                          :onClick #(write-new-field-input i field-path saved-path)}
+                      i])])
 
-          (let [field-path '(:settings :fields :doc-type)
-                saved-path '(:endpoint :selected :doc-type)
-                field-val (get-in state field-path)
-                saved-val (get-in state saved-path)
+            (let [field-path '(:settings :fields :doc-type)
+                  saved-path '(:endpoint :selected :doc-type)
+                  field-val (get-in state field-path)
+                  saved-val (get-in state saved-path)
 
-                selected-index (-> state :endpoint :selected :index keyword)
-                doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
-            [:label {:className "pure-u-1-3"} "doc_type"
-              [:select {:className "pure-u-1"
-                        :style {:borderColor (when saved-val "green")}
-                        :value saved-val
-                        :onChange change-doc-type}
-                  [:option]
-                  (for [doc-type doc-types]
-                    [:option {:value doc-type} (name doc-type)])]])
+                  selected-index (-> state :endpoint :selected :index keyword)
+                  doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
+              [:label {:className "pure-u-1-3"} "doc_type"
+                [:select {:className "pure-u-1"
+                          :style {:borderColor (when saved-val "green")}
+                          :value saved-val
+                          :onChange change-doc-type}
+                    [:option]
+                    (for [doc-type doc-types]
+                      [:option {:value doc-type} (name doc-type)])]]))
 
          [:div {:className "pure-g"}
              [:div {:className "pure-u-1"}
@@ -140,12 +142,13 @@
                          [:li
                            [:a {:onClick #(cloud-import sh)} (:name sh)]])]]]
 
-
          [:div {:className "pure-u-1"}
-           [:label {:className "pure-u-1"} "state"
-             [:textarea {:rows 6
-                         :className "pure-u-1"
-                         :value (str state)}]]]]]]))
+           [:label {:className "pure-u-1"}
+              [:a {:on-click #(swap! app/app-state assoc-in [:settings :show-state] (not show-state))} "state"]
+              (when show-state
+                 [:textarea {:rows 6
+                             :className "pure-u-1"
+                             :value (str state)}])]]]]]))
 
 (defn display-settings []
   (let [modals (:modals @app/app-state)]

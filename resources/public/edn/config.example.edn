@@ -4,6 +4,4 @@
                         :doc-type "product"
                         :instance-mapper "http://example.com/brainiac/products_mapper"
                         :suggesters {:currency {:agg-field "currency"
-                                                :query-field "currency"
-                                                :display-field nil
-                                                :checked nil}}}]}
+                                                :query-field "currency"}}}]}
