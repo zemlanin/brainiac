@@ -25,9 +25,10 @@
   (when-let [es-index (-> @app/app-state :endpoint :selected :index keyword)]
     (go
       (swap! app/app-state assoc :mappings
-          (-> (<! (GET (es-endpoint-mapping)))
-              es-index
-              :mappings)))))
+        (-> (<! (GET (es-endpoint-mapping)))
+          vals
+          first
+          :mappings)))))
 
 (defn get-filter-cond [[n f]]
   (match [(-> @app/app-state :cloud :script-filters n :script) f]
