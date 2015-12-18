@@ -178,12 +178,13 @@
   (let [state (rum/react app/app-state)
         loading (-> state :loading)
         instance-mapper (-> state :cloud :instance-mapper)
-        unread (-> state :notifications :unread not-empty)]
+        unread (-> state :notifications :unread count)]
     [:div
       [:a {:className (str "action fa fa-refresh" (when loading " rotating"))
             :onClick (when-not loading #(go (>! search/req-chan {})))}]
-      [:a {:className (str "action fa fa-gear" (when unread " notify-dot"))
-            :onClick display-settings}]
+      [:a {:className (str "action fa fa-gear")
+            :onClick display-settings}
+        (when (pos? unread) [:span {:class "notify-dot"} unread])]
       [:a {:className "action fa fa-newspaper-o"
             :style (when-not instance-mapper {:color :gray
                                               :cursor :auto})

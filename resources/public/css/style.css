@@ -40,16 +40,17 @@ a:not([href]):not(.fa) {
 }
 
 .notify-dot {
-  position: relative;
-}
-
-.notify-dot::after {
-  color: red;
-  font-size: 0.2em;
-  content: "⬤";
+  position: absolute;
+  color: white;
+  background-color: red;
+  font-size: 0.4em;
   position: absolute;
   top: 0;
-  right: -0.5em;
+  margin-left: -0.5em;
+  padding: 0.1em;
+  width: 1em;
+  height: 1em;
+  border-radius: 2em;
 }
 
 .notifications .title {
