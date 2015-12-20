@@ -10,19 +10,6 @@
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :as async :refer [<!]]))
 
-(def ENTER 13)
-
-(defn set-doc-type [v]
-  (swap! app/app-state assoc-in [:endpoint :selected :doc-type] v)
-  (search/get-mapping))
-
-(defn change-doc-type [e]
-  (when-let [new-doc-type (-> e
-                              .-target
-                              .-value
-                              (#(if (empty? %) nil (name %))))]
-      (set-doc-type new-doc-type)))
-
 (defn key-starts-with-dot [[k v]]
   (-> k
       clj->js
@@ -45,10 +32,6 @@
           (when (= 1 (count indices))
               (swap! app/app-state assoc-in [:endpoint :selected :index] (name (ffirst indices))))))))
 
-(defn write-new-field-input [new-value field-state settings-state]
-  (swap! app/app-state assoc-in settings-state new-value)
-  (swap! app/app-state update-in (butlast field-state) dissoc (last field-state)))
-
 (defn cloud-import [v]
   (swap! app/app-state assoc :cloud
     (select-keys v [:instance-mapper :suggesters :replace-filter-types :facet-counters :builtin-filters :script-filters]))
@@ -58,106 +41,34 @@
     (>! search/req-chan {:size 0})
     (>! search/req-chan {})))
 
-
-(defn check-and-save-field-input [e field-state settings-state]
-  (let [new-value (-> e .-target .-value)]
-    (if-not (s/check (get-in schema/StateSchema settings-state) new-value)
-      (write-new-field-input new-value field-state settings-state)
-      (swap! app/app-state assoc-in field-state new-value))))
-
-(defn check-field-input [e field-state settings-state]
-  (let [new-value (-> e .-target .-value)]
-    (swap! app/app-state assoc-in field-state new-value)))
-
 (defn settings-modal []
   (let [state @app/app-state
-        show-state (-> state :settings :show-state)]
-    [:div
-      [:form {:className "pure-form pure-form-stacked"
-              :style {:width "60vw"}
-              :action "#"}
+        show-state (-> state :settings :show-state)
+        notifications (-> state :notifications)]
 
-        [:div {:className "pure-g"}
-          (when false ; TODO: remove entirely?
-            (let [field-path '(:settings :fields :host)
-                  saved-path '(:endpoint :selected :host)
-                  field-val (get-in state field-path)
-                  saved-val (get-in state saved-path)]
-              [:label {:className "pure-u-1-3"} "host"
-                [:input {:className "pure-u-23-24"
-                          :type "text"
-                          :value (or field-val saved-val)
-                          :style {:borderColor (if field-val "red" (when saved-val "green"))}
-                          :onChange #(check-and-save-field-input % field-path saved-path)}]])
+    [:div {:className "pure-g"}
+      [:div {:className "pure-u-1-3"}
+          [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
+                      [:li
+                        [:a {:onClick #(cloud-import sh)} (:name sh)]])]]
 
-            (let [field-path '(:settings :fields :index)
-                  saved-path '(:endpoint :selected :index)
-                  field-val (get-in state field-path)
-                  saved-val (get-in state saved-path)
+      [:div {:className "pure-u-2-3 notifications"}
+          [:b {:class "title"} "notifications"]
+          [:ul nil
+            (for [n (->> notifications :unread (sort-by :id))]
+              [:li
+                [:b nil (:text n)]])
+            (for [n (->> notifications :read (sort-by :id >) (take 5))]
+              [:li
+                [:span nil (:text n)]])]]
 
-                  suggestions (when (or field-val (empty? saved-val))
-                                (->> state
-                                    :endpoint
-                                    :indices
-                                    keys
-                                    (map name)
-                                    (filter #(if field-val (.startsWith % field-val) true))
-                                    (take 3)))]
-              [:label {:className "pure-u-1-3"} "index"
-                [:input {:className "pure-u-23-24"
-                          :type "text"
-                          :style {:borderColor (if field-val "red" (when saved-val "green"))}
-                          :value (or field-val saved-val)
-                          :onChange #(check-and-save-field-input % field-path saved-path)
-                          :onKeyDown #(when (= ENTER (-> % .-keyCode))
-                                        (do
-                                          (.preventDefault %)
-                                          (when-let [f-suggestion (first suggestions)]
-                                            (write-new-field-input f-suggestion field-path saved-path))))}]
-                (for [i suggestions]
-                    [:a {:style {:marginRight "1em"
-                                  :textDecoration "underline"}
-                          :onClick #(write-new-field-input i field-path saved-path)}
-                      i])])
-
-            (let [field-path '(:settings :fields :doc-type)
-                  saved-path '(:endpoint :selected :doc-type)
-                  field-val (get-in state field-path)
-                  saved-val (get-in state saved-path)
-
-                  selected-index (-> state :endpoint :selected :index keyword)
-                  doc-types (if selected-index (-> state :endpoint :indices selected-index) [])]
-              [:label {:className "pure-u-1-3"} "doc_type"
-                [:select {:className "pure-u-1"
-                          :style {:borderColor (when saved-val "green")}
-                          :value saved-val
-                          :onChange change-doc-type}
-                    [:option]
-                    (for [doc-type doc-types]
-                      [:option {:value doc-type} (name doc-type)])]]))
-
-          [:div {:className "pure-u-1-3"}
-              [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
-                          [:li
-                            [:a {:onClick #(cloud-import sh)} (:name sh)]])]]
-
-          [:div {:className "pure-u-2-3 notifications"}
-              [:b {:class "title"} "notifications"]
-              [:ul nil
-                (for [n (->> state :notifications :unread (sort-by :id))]
-                  [:li
-                    [:b nil (:text n)]])
-                (for [n (->> state :notifications :read (sort-by :id >) (take 5))]
-                  [:li
-                    [:span nil (:text n)]])]]
-
-          [:div {:className "pure-u-1"}
-            [:label {:className "pure-u-1"}
-              [:a {:on-click #(swap! app/app-state assoc-in [:settings :show-state] (not show-state))} "state"]
-              (when show-state
-                 [:textarea {:rows 6
-                             :className "pure-u-1"
-                             :value (str state)}])]]]]]))
+      [:div {:className "pure-u-1"}
+        [:label {:className "pure-u-1"}
+          [:a {:on-click #(swap! app/app-state assoc-in [:settings :show-state] (not show-state))} "state"]
+          (when show-state
+             [:textarea {:rows 6
+                         :className "pure-u-1"
+                         :value (str state)}])]]]))
 
 (defonce notify-chan (async/chan))
 
