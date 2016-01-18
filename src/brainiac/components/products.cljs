@@ -103,10 +103,7 @@
         total (-> state :search-result :hits :total)
         facet-counters (-> state :search-result :facet-counters)
         size (count instances)
-        display-fn ;(case (-> state :display-fn)
-                    ;  :source es-source-component
-                    ;  es-source-component)
-                    (if (and (-> state :display-source) (-> state :cloud :instance-mapper))
+        display-fn (if (-> state :display-source)
                       es-source-component
                       #(if (:mapped %) (pretty-component %) (es-source-component %)))]
     [:div {:className "pure-g"}

@@ -249,10 +249,12 @@
         doc-type (-> state :endpoint :selected :doc-type keyword)
         type-replacements (-> state :cloud :replace-filter-types)
         filters (when doc-type (-> state :mappings doc-type :properties))
-        script-filters (-> state :cloud :script-filters)]
+        script-filters (-> state :cloud :script-filters)
+        hidden-filters (-> state :cloud :hidden-filters)]
     [:div
       [:ul (for [[n filter-data] (->> (merge filters script-filters)
                                     (into [])
+                                    (remove #(contains? hidden-filters (first %)))
                                     (sort-by first)
                                     (sort-by #(contains? applied (first %)) >)
                                     (map (fn [[n v]]
