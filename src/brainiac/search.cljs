@@ -189,6 +189,7 @@
                                       :size 100}
                               :aggs {:top {:top_hits {:size 1
                                                       :_source {:include field}}}}}}
+                    :size 0
                     :query
                       {:filtered
                         {:query {:match {query-field {:operator :and :fuzziness :AUTO :query value}}}}}}
