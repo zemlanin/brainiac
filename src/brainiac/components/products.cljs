@@ -13,21 +13,21 @@
 (rum/defc pretty-component < rum/static [{id :id image :image n :name url :url images :images :as data}]
   [:div {:key id
           :className "pure-u-1-3"}
-    [:div {:style {:fontFamily :monospace
-                    :background :white
+    [:div {:style {:fontFamily "monospace"
+                    :background "white"
                     :boxShadow "0.5em 0.5em 2em 0.1em gray"
                     :margin "1em"
                     :padding "0.5em"}}
       [:div {:className "pure-g"}
         [:div {:className "pure-u-1"}
           (if url
-            [:a {:href url :target :_blank} [:b n]]
+            [:a {:href url :target "_blank"} [:b n]]
             [:b n])
           [:i " (" id ")"]]
         [:div {:className "pure-u-1-3"
-                :style {:textAlign :center}}
+                :style {:textAlign "center"}}
           (if url
-            [:a {:href url :target :_blank}
+            [:a {:href url :target "_blank"}
               [:img {:src image
                       :style {:maxHeight 200 :maxWidth "100%"}}]]
             [:img {:src image
@@ -38,7 +38,7 @@
         [:div {:className "pure-u-1-24"}]
         [:div {:className "pure-u-15-24"
                 :style {:maxHeight 200
-                        :overflow :auto
+                        :overflow "auto"
                         :WebkitTransform "translateZ(0)"}}
           (:description data)]]]])
 
@@ -46,11 +46,11 @@
   (let [pdata (-> data pprint with-out-str (str/split "\n"))]
     [:div {:key id
             :className "pure-u-1-3"}
-      [:div {:style {:fontFamily :monospace
-                      :background :white
+      [:div {:style {:fontFamily "monospace"
+                      :background "white"
                       :boxShadow "0.5em 0.5em 2em 0.1em gray"
                       :margin "1em"
-                      :overflow :auto
+                      :overflow "auto"
                       :WebkitTransform "translateZ(0)"
                       :padding "0.5em"}}
         (for [line pdata]
