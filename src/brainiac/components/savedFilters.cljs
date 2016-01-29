@@ -34,7 +34,7 @@
 (rum/defc savedFilters-component < rum/reactive []
   (let [state (rum/react app/app-state)
         saved-filters (->> state :saved-filters (into []))
-        builtin-filters (->> state :cloud :builtin-filters (into []))
+        builtin-filters (->> state :endpoint :builtin-filters (into []))
         current-applied-key (-> state :applied hash str)]
     [:div {}
       [:a {:className "save fa fa-save"

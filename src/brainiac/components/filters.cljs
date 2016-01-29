@@ -178,7 +178,7 @@
 
 (defn string-filter [n {v :value}]
   (let [state @app/app-state
-        suggester (some? (-> state :cloud :suggesters n))
+        suggester (some? (-> state :endpoint :suggesters n))
         suggestions (when suggester (-> state :search-result :suggestions n))]
 
     [:fieldset
@@ -246,11 +246,10 @@
 (rum/defc filters-component < rum/reactive []
   (let [state (rum/react app/app-state)
         applied (:applied state)
-        doc-type (-> state :endpoint :selected :doc-type keyword)
-        type-replacements (-> state :cloud :replace-filter-types)
-        filters (when doc-type (-> state :mappings doc-type :properties))
-        script-filters (-> state :cloud :script-filters)
-        hidden-filters (-> state :cloud :hidden-filters)]
+        type-replacements (-> state :endpoint :replace-filter-types)
+        filters (-> state :mapping :properties)
+        script-filters (-> state :endpoint :script-filters)
+        hidden-filters (-> state :endpoint :hidden-filters)]
     [:div
       [:ul (for [[n filter-data] (->> (merge filters script-filters)
                                     (into [])

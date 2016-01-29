@@ -8,33 +8,8 @@
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :as async :refer [<!]]))
 
-(defn key-starts-with-dot [[k v]]
-  (-> k
-      clj->js
-      (#(re-matches #"^\." %))))
-
-(defn value-has-mappings [[k v]]
-  (not (empty? (-> v :mappings))))
-
-(defn load-indices []
-  (let [state @app/app-state
-        endpoint (str "http://" (-> state :endpoint :selected :host) "/_mapping")]
-      (go
-        (let [indices (->> (<! (GET endpoint))
-                          (filter (complement key-starts-with-dot))
-                          (filter value-has-mappings))
-              stripped-indices (->> indices
-                                    (map #(vector (first %) (-> % second :mappings keys)))
-                                    (into {}))]
-          (swap! app/app-state assoc-in [:endpoint :indices] stripped-indices)
-          (when (= 1 (count indices))
-              (swap! app/app-state assoc-in [:endpoint :selected :index] (name (ffirst indices))))))))
-
 (defn cloud-import [v]
-  (swap! app/app-state assoc :cloud
-    (select-keys v [:instance-mapper :suggesters :replace-filter-types :facet-counters :builtin-filters :script-filters :hidden-filters :ignore-filters]))
-  ;(swap! app/app-state assoc-in [:cloud :field-mappers] (-> raw :docType :fieldMappers))
-  (swap! app/app-state assoc-in [:endpoint :selected] (select-keys v [:host :index :doc-type]))
+  (swap! app/app-state assoc :endpoint v)
   (go
     (>! search/req-chan {:size 0})
     (>! search/req-chan {})))
@@ -46,7 +21,7 @@
 
     [:div {:className "pure-g"}
       [:div {:className "pure-u-1-3"}
-          [:ul nil (for [sh (-> state :cs-config :endpoint-shortcuts)]
+          [:ul nil (for [sh (-> state :config :endpoint-shortcuts)]
                       [:li
                         [:a {:onClick #(cloud-import sh)} (:name sh)]])]]
 
@@ -61,12 +36,12 @@
                 [:span nil (:text n)]])]]
 
       [:div {:className "pure-u-1"}
-        [:label {:className "pure-u-1"}
-          [:a {:on-click #(swap! app/app-state assoc-in [:settings :show-state] (not show-state))} "state"]
-          (when show-state
-             [:textarea {:rows 6
-                         :className "pure-u-1"
-                         :value (str state)}])]]]))
+        [:a {:on-click #(swap! app/app-state assoc-in [:settings :show-state] (not show-state))}
+          "state"]
+        (when show-state
+           [:pre {:style {:height "20em"
+                          :font-family :monospace}}
+              (with-out-str (cljs.pprint/pprint state))])]]))
 
 (defonce notify-chan (async/chan))
 
@@ -75,7 +50,7 @@
     (when (zero? (count modals))
       (go
         (let [cs-config (<! (GET "/edn/config.edn" {:response-format :edn}))]
-          (swap! app/app-state assoc :cs-config cs-config)
+          (swap! app/app-state assoc :config cs-config)
           (when-let [notifications-url (-> cs-config :notifications :url)]
             (async/>! notify-chan {:mark-as-read true}))))
       (swap! app/app-state assoc :modals [#'settings-modal]))))
@@ -86,7 +61,7 @@
 (rum/defc controls-component < rum/reactive []
   (let [state (rum/react app/app-state)
         loading (-> state :loading)
-        instance-mapper (-> state :cloud :instance-mapper)
+        instance-mapper (-> state :endpoint :instance-mapper)
         unread (-> state :notifications :unread count)
         display-source (-> state :display-source)]
     [:div
@@ -108,9 +83,8 @@
 
 (defn update-controls [_ _ prev cur]
   (go
-    (when-not (u/=in prev cur :endpoint :selected)
-      (search/get-mapping)
-      (when-not (u/=in prev cur :endpoint :selected :host) (load-indices)))))
+    (when-not (u/=in prev cur :endpoint)
+      (search/get-mapping))))
 
 (defn setup-watcher []
   (display-settings)
@@ -120,7 +94,7 @@
     (recur))
   (go-loop []
     (when-let [{mark-as-read :mark-as-read} (<! notify-chan)]
-      (when-let [notifications-url (-> @app/app-state :cs-config :notifications :url)]
+      (when-let [notifications-url (-> @app/app-state :config :notifications :url)]
         (handle-notifications (<! (GET notifications-url {:response-format :edn})) mark-as-read))
       (recur)))
   (add-watch app/app-state :controls-watcher update-controls))

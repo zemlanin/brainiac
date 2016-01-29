@@ -157,7 +157,7 @@
             hits-map (into {} (for [h hits] [(-> h :_id js/parseInt) h]))
             ids (keys hits-map)]
         (go
-          (if-let [url (-> state :cloud :instance-mapper)]
+          (if-let [url (-> state :endpoint :instance-mapper)]
             (let [{instances :instances} (try (<? (GET (str url "?ids=" (str/join "," ids))))
                                           (catch js/Error e
                                             nil))]

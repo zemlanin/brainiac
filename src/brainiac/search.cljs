@@ -9,29 +9,30 @@
               [cljs.core.match :refer-macros [match]]))
 
 (defn es-endpoint []
-  (when-let [selected (-> @app/app-state :endpoint :selected)]
-      (str "http://" (:host selected) "/" (:index selected))))
+  (let [endpoint (-> @app/app-state :endpoint)]
+    (str "http://" (:host endpoint) "/" (:index endpoint))))
 
 (defn es-endpoint-mapping []
-  (if-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]
-      (str (es-endpoint) "/" doc-type "/_mapping")
-      (str (es-endpoint) "/_mapping")))
+  (when-let [doc-type (-> @app/app-state :endpoint :doc-type)]
+    (str (es-endpoint) "/" doc-type "/_mapping")))
 
 (defn es-endpoint-search []
-  (when-let [doc-type (-> @app/app-state :endpoint :selected :doc-type)]
-      (str (es-endpoint) "/" doc-type "/_search")))
+  (when-let [doc-type (-> @app/app-state :endpoint :doc-type)]
+    (str (es-endpoint) "/" doc-type "/_search")))
 
 (defn get-mapping []
-  (when-let [es-index (-> @app/app-state :endpoint :selected :index keyword)]
+  (when-let [es-index (-> @app/app-state :endpoint :index keyword)]
     (go
-      (swap! app/app-state assoc :mappings
+      (swap! app/app-state assoc :mapping
         (-> (<! (GET (es-endpoint-mapping)))
           vals
           first
-          :mappings)))))
+          :mappings
+          ((-> @app/app-state :endpoint :doc-type keyword)))))))
+
 
 (defn get-filter-cond [[n f]]
-  (match [(-> @app/app-state :cloud :script-filters n :script) f]
+  (match [(-> @app/app-state :endpoint :script-filters n :script) f]
     [nil {:type :boolean :value v}] {:term {n v}}
     [s {:type :boolean :value v}] {:script {:script (get s v)}}
 
@@ -45,7 +46,7 @@
 
 
 (defn get-mapping-data [field]
-  (-> @app/app-state :mappings :product :properties field :properties))
+  (-> @app/app-state :mapping :properties field :properties))
 
 (defn get-match-cond [[n f]]
   (let [agg-field (when (-> n get-mapping-data :id) (str (name n) ".id"))]
@@ -57,19 +58,17 @@
 
 (defn get-obj-fields []
   (->> @app/app-state
-      :mappings
-      :product
+      :mapping
       :properties
       (filter #(-> % second :properties :id))
       keys))
-
 
 (def req-chan (chan (sliding-buffer 1)))
 (def req-suggestions-chan (chan (sliding-buffer 1)))
 
 (defn extract-suggestions [resp field]
   (let [state @app/app-state
-        field-settings (-> state :cloud :suggesters field)
+        field-settings (-> state :endpoint :suggesters field)
         display-field (when (-> field get-mapping-data :name)
                         :name)]
     (-> resp
@@ -101,11 +100,11 @@
             applied (filter #(not (nil? (second %))) (:applied state))
             applied-filtered (filter some? (map get-filter-cond applied))
             applied-match (filter some? (map get-match-cond applied))
-            suggesters (-> state :cloud :suggesters keys)
-            counter-fields (-> state :cloud :facet-counters)
+            suggesters (-> state :endpoint :suggesters keys)
+            counter-fields (-> state :endpoint :facet-counters)
             agg-fields (concat suggesters (get-obj-fields))
             suggesters-params (into {} (for [field agg-fields]
-                                          (let [settings (-> state :cloud :suggesters field)
+                                          (let [settings (-> state :endpoint :suggesters field)
                                                 agg-field (cond
                                                             (:agg-field settings) (:agg-field settings)
                                                             (-> field get-mapping-data :id) (str (name field) ".id")
@@ -168,7 +167,7 @@
     (go
       (let [field (-> msg :field)
             state @app/app-state
-            field-settings (-> state :cloud :suggesters field)
+            field-settings (-> state :endpoint :suggesters field)
             query-field (cond
                           (:query-field field-settings) (:query-field field-settings)
                           (-> field get-mapping-data :name) (str (name field) ".name")
@@ -197,7 +196,6 @@
           (>! ch [field (->> raw
                             (#(extract-suggestions % field))
                             (sort-by #(number-of-encounters value (display-field %)) >))])))
-
     ch))
 
 (def throttled-req-suggestions-chan (u/throttle req-suggestions-chan 2000))

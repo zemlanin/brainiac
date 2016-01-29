@@ -18,7 +18,7 @@
 
 (rum/defc appliedFilters-component < rum/reactive []
   (let [state (rum/react app/app-state)
-              ignore-filters (-> state :cloud :ignore-filters)
+              ignore-filters (-> state :endpoint :ignore-filters)
               applied (-> state :applied)]
     (when applied
       [:div
