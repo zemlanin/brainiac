@@ -10,7 +10,7 @@
               [cljs.pprint :refer [pprint]]
               [brainiac.appstate :as app]))
 
-(defn pretty-component [{id :id image :image n :name url :url images :images :as data}]
+(rum/defc pretty-component < rum/static [{id :id image :image n :name url :url images :images :as data}]
   [:div {:key id
           :className "pure-u-1-3"}
     [:div {:style {:fontFamily :monospace
@@ -42,7 +42,7 @@
                         :WebkitTransform "translateZ(0)"}}
           (:description data)]]]])
 
-(defn es-source-component [{{id :_id} :es :as data}]
+(rum/defc es-source-component < rum/static [{{id :_id} :es :as data}]
   (let [pdata (-> data pprint with-out-str (str/split "\n"))]
     [:div {:key id
             :className "pure-u-1-3"}

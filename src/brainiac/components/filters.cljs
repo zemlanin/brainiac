@@ -107,14 +107,14 @@
       (swap! app/app-state assoc :applied (dissoc applied n)))
     (go (>! search/req-chan {}))))
 
-(defn boolean-filter [n {v :value}]
+(rum/defc boolean-filter < rum/static [n {v :value}]
   [:fieldset
     [:legend
       [:label
         (name n)
         (when (some? v) [:a {:class "fa fa-remove"}])
-        [:input {:type :checkbox
-                  :style {:display :none}
+        [:input {:type "checkbox"
+                  :style {:display "none"}
                   :value "null"
                   :checked (some? v)
                   :onChange #(when-not (-> % .-target .-checked) (boolean-onchange n %))}]]]
@@ -131,14 +131,14 @@
                             :value str-val}
                    str-val]]]))]])
 
-(defn integer-filter [n {{v-min :min v-max :max :as v} :value}]
+(rum/defc integer-filter < rum/static [n {{v-min :min v-max :max :as v} :value}]
   [:fieldset
     [:legend
       [:label
         (name n)
         (when v [:a {:class "fa fa-remove"}])
-        [:input {:type :checkbox
-                  :style {:display :none}
+        [:input {:type "checkbox"
+                  :style {:display "none"}
                   :value "null"
                   :checked v
                   :onChange #(when-not (-> % .-target .-checked) (integer-onchange n :all %))}]]]
@@ -153,14 +153,14 @@
               :value v-max
               :onChange #(integer-onchange n :max %)}]])
 
-(defn float-filter [n {{v-min :min v-max :max :as v} :value}]
+(rum/defc float-filter < rum/static [n {{v-min :min v-max :max :as v} :value}]
   [:fieldset
     [:legend
       [:label
         (name n)
         (when v [:a {:class "fa fa-remove"}])
-        [:input {:type :checkbox
-                  :style {:display :none}
+        [:input {:type "checkbox"
+                  :style {:display "none"}
                   :value "null"
                   :checked v
                   :onChange #(when-not (-> % .-target .-checked) (float-onchange n :all %))}]]]
@@ -176,72 +176,66 @@
               :value v-max
               :onChange #(float-onchange n :max %)}]])
 
-(defn string-filter [n {v :value}]
-  (let [state @app/app-state
-        suggester (some? (-> state :endpoint :suggesters n))
-        suggestions (when suggester (-> state :search-result :suggestions n))]
-
-    [:fieldset
-      [:legend
-        [:label
-          (name n)
-          (when v [:a {:class "fa fa-remove"}])
-          [:input {:type :checkbox
-                    :style {:display :none}
+(rum/defc string-filter < rum/static [n {v :value} suggestions]
+  [:fieldset
+    [:legend
+      [:label
+        (name n)
+        (when v [:a {:class "fa fa-remove"}]
+          [:input {:type "checkbox"
+                    :style {:display "none"}
                     :value ""
                     :checked v
-                    :onChange #(when-not (-> % .-target .-checked) (string-onchange n %))}]]]
-      (if suggester
-        (if v
-          [:ul
-            [:li [:span v]]]
-          [:ul (for [s (take 10 suggestions)]
-                  [:li [:a
-                          {:onClick #(string-set-filter n (:name s))}
-                          (:name s) [:sup (:count s)]]])])
-        [:input {:style {:width "80%"}
-                  :value v
-                  :onChange #(string-onchange n %)}])]))
-
-(defn obj-filter [n {v :value props :properties}]
-  (let [state @app/app-state
-        suggestions (-> state :search-result :suggestions n)]
-
-    [:fieldset
-      [:legend
-        [:label
-          (name n) "*"
-          (when (:id v) [:a {:class "fa fa-remove"}])
-          [:input {:type :checkbox
-                    :style {:display :none}
-                    :value ""
-                    :checked (-> v :id)
-                    :onChange #(when-not (-> % .-target .-checked) (obj-onchange n %))}]]]
-
+                    :onChange #(when-not (-> % .-target .-checked) (string-onchange n %))}])]]
+    (if suggestions
+      (if v
+        [:ul
+          [:li [:span v]]]
+        [:ul (for [s (take 10 suggestions)]
+                [:li [:a
+                        {:onClick #(string-set-filter n (:name s))}
+                        (:name s) [:sup (:count s)]]])])
       [:input {:style {:width "80%"}
-                :value (:name v)
-                :onChange #(obj-onchange n %)}]
-      [:ul (for [s (take 10 suggestions)]
-              [:li [:a
-                      {:onClick #(obj-suggestion-onclick n s)}
-                      (:name s) [:sup (:count s)]]])]]))
+                :value v
+                :onChange #(string-onchange n %)}])])
+
+(rum/defc obj-filter < rum/static [n {v :value props :properties} suggestions]
+  [:fieldset
+    [:legend
+      [:label
+        (name n) "*"
+        (when (:id v) [:a {:class "fa fa-remove"}])
+        [:input {:type "checkbox"
+                  :style {:display "none"}
+                  :value ""
+                  :checked (-> v :id)
+                  :onChange #(when-not (-> % .-target .-checked) (obj-onchange n %))}]]]
+
+    [:input {:style {:width "80%"}
+              :value (:name v)
+              :onChange #(obj-onchange n %)}]
+    [:ul (for [s (take 10 suggestions)]
+            [:li [:a
+                    {:onClick #(obj-suggestion-onclick n s)}
+                    (:name s) [:sup (:count s)]]])]])
 
 (defn match-filter-type [filter-name filter-data value]
-  (match [filter-name filter-data]
-    [_ {:type "boolean"}] [:li {:key filter-name} (boolean-filter filter-name value)]
-    [_ {:type "integer"}] [:li {:key filter-name} (integer-filter filter-name value)]
-    [_ {:type "long"}] [:li {:key filter-name} (integer-filter filter-name value)]
-    [_ {:type "string"}] [:li {:key filter-name} (string-filter filter-name value)]
-    [_ {:type "float"}] [:li {:key filter-name} (float-filter filter-name value)]
-    [_ {:type "double"}] [:li {:key filter-name} (float-filter filter-name value)]
-    [_ {:index "no"}] nil
-    [_ {:properties {:id _ :name _}}] [:li {:key filter-name} (obj-filter filter-name value)]
-    [_ {:properties _}] [:li {:key filter-name
-                              :style {:color "gray"
-                                      :fontSize "0.6em"}} "obj" (str filter-name)]
-    :else [:li {:key filter-name
-                :style {:color "gray"
-                        :fontSize "0.6em"}} (str filter-data) (str filter-name)]))
+  (let [suggestions (-> @app/app-state :search-result :suggestions filter-name)]
+    (match [filter-name filter-data]
+      [_ {:type "boolean"}] [:li {:key filter-name} (boolean-filter filter-name value)]
+      [_ {:type "integer"}] [:li {:key filter-name} (integer-filter filter-name value)]
+      [_ {:type "long"}] [:li {:key filter-name} (integer-filter filter-name value)]
+      [_ {:type "string"}] [:li {:key filter-name} (string-filter filter-name value suggestions)]
+      [_ {:type "float"}] [:li {:key filter-name} (float-filter filter-name value)]
+      [_ {:type "double"}] [:li {:key filter-name} (float-filter filter-name value)]
+      [_ {:index "no"}] nil
+      [_ {:properties {:id _ :name _}}] [:li {:key filter-name} (obj-filter filter-name value suggestions)]
+      [_ {:properties _}] [:li {:key filter-name
+                                :style {:color "gray"
+                                        :fontSize "0.6em"}} "obj" (str filter-name)]
+      :else [:li {:key filter-name
+                  :style {:color "gray"
+                          :fontSize "0.6em"}} (str filter-data) (str filter-name)])))
 
 (rum/defc filters-component < rum/reactive []
   (let [state (rum/react app/app-state)
