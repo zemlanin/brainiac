@@ -8,10 +8,9 @@
               [brainiac.ajax :refer [GET POST]]
               [cljs.core.async :as async :refer [<!]]))
 
-(defn cloud-import [v]
-  (swap! app/app-state assoc :endpoint v)
+(defn select-endpoint [endpoint]
+  (swap! app/app-state assoc :endpoint endpoint)
   (go
-    (>! search/req-chan {:size 0})
     (>! search/req-chan {})))
 
 (defn settings-modal []
@@ -21,9 +20,9 @@
 
     [:div {:className "pure-g"}
       [:div {:className "pure-u-1-3"}
-          [:ul nil (for [sh (-> state :config :endpoint-shortcuts)]
+          [:ul nil (for [endpoint (-> state :config :endpoint-shortcuts)]
                       [:li
-                        [:a {:onClick #(cloud-import sh)} (:name sh)]])]]
+                        [:a {:onClick #(select-endpoint endpoint)} (:name endpoint)]])]]
 
       [:div {:className "pure-u-2-3 notifications"}
           [:b {:class "title"} "notifications"]
