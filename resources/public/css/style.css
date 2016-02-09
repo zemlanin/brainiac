@@ -89,6 +89,7 @@ a:not([href]):not(.fa) {
   bottom: 3.3em;
   width: inherit;
   overflow-y: auto;
+  font-size: 0.9em;
 }
 
 #filters ul {
@@ -103,13 +104,45 @@ a:not([href]):not(.fa) {
   border: none;
 }
 
-#filters fieldset ul {
-  padding-left: 1em;
-}
-
 #filters fieldset li input {
   margin-left: 0.5em;
 }
+
+#filters .buttons-group {
+  display: inline-block;
+}
+
+#filters .buttons-group button:first-of-type {
+  border-radius: 5px 0 0 5px;
+}
+
+#filters .buttons-group button:last-of-type {
+  border-radius: 0 5px 5px 0;
+}
+
+#filters label {
+  margin-left: 0.5em;
+  display: inline-block;
+}
+
+#filters button {
+  padding: 0.2em;
+  width: 1.5em;
+  font-weight: bold;
+  border-radius: 0;
+}
+
+#filters button.positive { color: #00A500; }
+#filters button.secondary { color: skyblue; }
+#filters button.negative { color: red; }
+
+#filters button.positive:hover { color: white; background-color: #00A500; }
+#filters button.secondary:hover { color: white; background-color: skyblue; }
+#filters button.negative:hover { color: white; background-color: red; }
+
+#filters button.positive.active { color: white; background-color: #00A500; }
+#filters button.secondary.active { color: white; background-color: skyblue; }
+#filters button.negative.active { color: white; background-color: red; }
 
 #controls {
   position: fixed;

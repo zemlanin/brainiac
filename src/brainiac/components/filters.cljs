@@ -20,11 +20,9 @@
     true "true"
     v))
 
-(defn boolean-onchange [n e]
-  (.preventDefault e)
+(defn boolean-onchange [n v]
   (let [applied (:applied @app/app-state)
         old-value (n applied)
-        v (-> e .-target .-value js-str->clj)
         new-value (if (nil? v) nil {:type :boolean :value v})]
     (if (some? new-value)
       (swap! app/app-state assoc-in [:applied n] new-value)
@@ -109,27 +107,17 @@
 
 (rum/defc boolean-filter < rum/static [n {v :value}]
   [:fieldset
-    [:legend
-      [:label
-        (name n)
-        (when (some? v) [:a {:class "fa fa-remove"}])
-        [:input {:type "checkbox"
-                  :style {:display "none"}
-                  :value "null"
-                  :checked (some? v)
-                  :onChange #(when-not (-> % .-target .-checked) (boolean-onchange n %))}]]]
-
-    [:ul (for [bool-val [false true]]
-            (let [str-val (clj->js-str bool-val)]
-              [:li {:key str-val
-                    :style {:display "inline"
-                            :listStyleType "none"}}
-                [:label
-                  [:input {:type "radio"
-                            :checked (= v bool-val)
-                            :onChange #(boolean-onchange n %)
-                            :value str-val}
-                   str-val]]]))]])
+    [:ul {:class "pure-control-group buttons-group"}
+      [:button {:class (str "pure-button negative" (when (= v false) " active"))
+                :on-click #(boolean-onchange n false)}
+        "-"]
+      [:button {:class (str "pure-button secondary" (when (= v nil) " active"))
+                :on-click #(boolean-onchange n nil)}
+        "\u00A0"]
+      [:button {:class (str "pure-button positive" (when (= v true) " active"))
+                :on-click #(boolean-onchange n true)}
+        "+"]]
+    [:label (name n)]])
 
 (rum/defc integer-filter < rum/static [n {{v-min :min v-max :max :as v} :value}]
   [:fieldset
