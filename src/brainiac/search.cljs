@@ -91,7 +91,12 @@
                     :count doc_count}))))))
 
 (defn extract-counters [resp field]
-  (-> resp :aggregations field))
+  (let [aggs (-> resp :aggregations)
+        terms-agg (-> aggs ((keyword (str (name field) "-terms"))))
+        cardinality-agg (-> aggs ((keyword (str (name field) "-cardinality"))))]
+
+    {:buckets (-> terms-agg :buckets)
+      :total (-> cardinality-agg :value)}))
 
 (defn perform-search [msg]
   (let [ch (chan 1)]
@@ -119,8 +124,10 @@
                                                                             :_source {:include field}}}}}
                                                   {:terms {:field agg-field}})})))
             facet-counters-params (into {} (for [field counter-fields]
-                                              {field {:terms {:field (name field)
-                                                              :size 20}}}))
+                                              { (keyword (str (name field) "-terms"))
+                                                {:terms {:field (name field) :size 20}}
+                                                (keyword (str (name field) "-cardinality"))
+                                                {:cardinality {:field (name field)}}}))
             params {:aggs (merge suggesters-params facet-counters-params)
                     :query {:filtered {:filter
                                         {:bool

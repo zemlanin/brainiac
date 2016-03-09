@@ -61,7 +61,7 @@
 (defn stats-modal []
   (let [state @app/app-state
         field (:displayed-stats state)
-        {buckets :buckets others :sum_other_doc_count error-bound :doc_count_error_upper_bound} (-> state :search-result :facet-counters field)
+        {buckets :buckets total :total} (-> state :search-result :facet-counters field)
         max-count (-> buckets first :doc_count)]
     [:div {}
       [:h3 {:style {:margin 0}} (name field) " stats"]
@@ -81,12 +81,10 @@
                                 :color "#00A500"
                                 :background-color "#00A500"}} "."]]])]]
 
-      (when-not (zero? others)
+      (when-not (zero? (- total (count buckets)))
         [:div {:style {:paddingTop "0.5em"}}
           [:b {}
-            "+" others
-            (when-not (zero? error-bound)
-              [:sup {} (str " ±" error-bound)])
+            "+" (- total (count buckets))
             " others"]])]))
 
 (defn display-stats [field]
@@ -113,13 +111,11 @@
       (when-not (empty? facet-counters)
         [:h4 {:className "pure-u-1"
               :style {:marginTop 0}}
-          (for [[n {buckets :buckets others :sum_other_doc_count error-bound :doc_count_error_upper_bound}] facet-counters]
+          (for [[n {buckets :buckets total :total}] facet-counters]
             [ (if (> (count buckets) 1) :a :span)
               {:onClick (when (> (count buckets) 1) #(display-stats n))}
               (name n) ": "
-              (+ others (count buckets))
-              (when-not (zero? error-bound)
-                [:sup {} (str " ±" error-bound)])])])
+              total])])
       [:div (map display-fn instances)]
       (when
         (and
